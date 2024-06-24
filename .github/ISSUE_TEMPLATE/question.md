@@ -1,9 +1,13 @@
 ---
 name: Question
-about: If you have a question about SimpleTradeSkillExporter in general choose this issue type.
-labels: "Question"
+about: If you have a question about SimpleTradeSkillExporter in general choose this
+  issue type.
+title: ''
+labels: question
+assignees: ''
 
 ---
+
 <!-- READ THIS FIRST
 
 Hello, thanks for taking the time to contact us!

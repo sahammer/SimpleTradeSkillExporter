@@ -1,10 +1,13 @@
 ---
 name: Bug report
-about: Create a bug report about any bug that you may encounter or error message you are receiving. 
-title: '[BUG] '
-labels: 'Bug'
+about: Create a bug report about any bug that you may encounter or error message you
+  are receiving.
+title: "[BUG] "
+labels: bug
+assignees: ''
 
 ---
+
 <!-- READ THIS FIRST
 
 Hello, thanks for taking the time to report a bug!
