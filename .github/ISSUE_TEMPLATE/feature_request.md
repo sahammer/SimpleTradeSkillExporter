@@ -3,7 +3,7 @@ name: Feature request
 about: Is there something you think could improve SimpleTradeSkillExporter? Let us
   know what you'd like to see!
 title: "[FEATURE]"
-labels: ''
+labels: Feature Request
 assignees: ''
 
 ---
