@@ -1,7 +1,8 @@
-## Interface: 30400
-## Title: SimpleTradeSkillExporter|cFF00FF00 v1.0.0|r
+## Interface: 40400
+## Title: SimpleTradeSkillExporter|cFF00FF00 v1.0.1|r
 ## Author: Hamma / GrumpyOldLisian
 ## Notes: A simple trade skill exporter
-## Version: 1.0.0
+## Version: 1.0.1
+## X-Curse-Project-ID: 1048094
 
 SimpleTradeSkillExporter.lua
