@@ -1,0 +1,8 @@
+package-as: SimpleTradeSkillExporter
+
+move-folders:
+    SimpleTradeSkillExporter/SimpleTradeSkillExporter: SimpleTradeSkillExporter
+
+manual-changelog:
+    filename: CHANGELOG.md
+    markup-type: markdown
