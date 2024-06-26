@@ -69,9 +69,9 @@ function openSimpleTradeSkillExporterWindow(tradeskillName, rank, text, recipeCo
 	SimpleTradeSkillExporterWindow:Show()
 end
 
--- Look to switch to UIPanelDialogTemplate
 function createSimpleTradeSkillExporterWindow()
 	local frame = CreateFrame("Frame", "SimpleTradeSkillExporterWindow", UIParent, "BasicFrameTemplateWithInset")
+	-- Look to switch to UIPanelDialogTemplate
 	frame:SetSize(640, 480)
 	frame:SetPoint("CENTER")
 	frame:SetMovable(true)
