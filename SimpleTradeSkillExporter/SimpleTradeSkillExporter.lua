@@ -63,17 +63,17 @@ function openSimpleTradeSkillExporterWindow(tradeskillName, rank, text, recipeCo
 	if exportType then
 		if exportType == "markdown" then
 			editText =
-				"# Player: " ..
+				"**Player:** " ..
 				playerName .. "," .. " Level " .. playerLevel .. " " .. playerRace .. " " .. playerClass .. "\n" ..
-				"## Guild: " .. guildName .. "\n" ..
-				"## Server: " .. serverName .. "\n"
+				"**Guild:** " .. guildName .. "\n" ..
+				"**Server:** " .. serverName .. "\n"
 			if (rank > 0) then
 				editText = editText ..
-				"### " .. tradeskillName .. " skill " .. rank .. ", " .. recipeCount .. " total recipes" .. "\n"
+				"**" .. tradeskillName .. ":** Skill " .. rank .. ", " .. recipeCount .. " total recipes" .. "\n"
 			end
-			editText = editText .. "---------------------" .. "\n" .. text
+			editText = editText .. "\n" .. text
 		elseif exportType == "csv" then
-			editText = "Recipe" .. "\n" .. text
+			editText = text
 		end
 	end
 	SimpleTradeSkillExporterWindow.editBox:SetText(editText)
