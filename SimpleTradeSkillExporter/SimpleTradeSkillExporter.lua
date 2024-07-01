@@ -1,8 +1,7 @@
 SLASH_SIMPLETRADESKILLEXPORTER1 = "/tsexport"
 SlashCmdList["SIMPLETRADESKILLEXPORTER"] = function(msg)
 	if msg == "help" then
-		print(
-		"\124cff00FF00tsexport:\124r \124cff00FF00S\124rimple \124cff00FF00T\124rradeskill \124cff00FF00E\124rxporter - Help")
+		print("\124cff00FF00tsexport:\124r \124cff00FF00S\124rimple \124cff00FF00T\124rradeskill \124cff00FF00E\124rxporter - Help")
 		print("\124cff00FF00tsexport:\124r Type '/tsexport help' to show this message")
 		print("\124cff00FF00tsexport:\124r Open a tradeskill window then type one of the following commands")
 		print("\124cff00FF00tsexport:\124r Type '/tsexport' to export a simple text list")
@@ -14,9 +13,6 @@ SlashCmdList["SIMPLETRADESKILLEXPORTER"] = function(msg)
 			print("\124cffFF0000Error:\124r Must open a tradeskill window. Type /tsexport help for more information.")
 		else
 			local text = ''
-			if msg == "csv" then
-				text = '\n'
-			end
 			local recipeCount = 0
 			for i = 1, GetNumTradeSkills() do
 				local name, type, _, _, _, _ = GetTradeSkillInfo(i)
@@ -35,12 +31,12 @@ SlashCmdList["SIMPLETRADESKILLEXPORTER"] = function(msg)
 					recipeCount = recipeCount + 1
 				end
 			end
-			openSimpleTradeSkillExporterWindow(tsName, tsRank, text, recipeCount)
+			openSimpleTradeSkillExporterWindow(tsName, tsRank, text, recipeCount, msg)
 		end
 	end
 end
 
-function openSimpleTradeSkillExporterWindow(tradeskillName, rank, text, recipeCount)
+function openSimpleTradeSkillExporterWindow(tradeskillName, rank, text, recipeCount, exportType)
 	if not SimpleTradeSkillExporterWindow then
 		createSimpleTradeSkillExporterWindow()
 	end
@@ -61,17 +57,33 @@ function openSimpleTradeSkillExporterWindow(tradeskillName, rank, text, recipeCo
 	if (rank > 0) then
 		SimpleTradeSkillExporterWindow.title:SetText(tradeskillName ..
 		" skill " .. rank .. " - " .. recipeCount .. " recipes - Press CTRL-C to copy.")
-		editText = editText .. "Tradeskill: " .. tradeskillName .. "\n"
+		editText = editText .. tradeskillName .. " skill " .. rank .. ", " .. recipeCount .. " total recipes" .. "\n"
 	end
 	editText = editText .. "---------------------" .. "\n" .. text
+	if exportType then
+		if exportType == "markdown" then
+			editText =
+				"**Player:** " ..
+				playerName .. "," .. " Level " .. playerLevel .. " " .. playerRace .. " " .. playerClass .. "\n" ..
+				"**Guild:** " .. guildName .. "\n" ..
+				"**Server:** " .. serverName .. "\n"
+			if (rank > 0) then
+				editText = editText ..
+				"**" .. tradeskillName .. ":** Skill " .. rank .. ", " .. recipeCount .. " total recipes" .. "\n"
+			end
+			editText = editText .. "\n" .. text
+		elseif exportType == "csv" then
+			editText = text
+		end
+	end
 	SimpleTradeSkillExporterWindow.editBox:SetText(editText)
 	SimpleTradeSkillExporterWindow.editBox:HighlightText()
 	SimpleTradeSkillExporterWindow:Show()
 end
 
+-- Look to switch to UIPanelDialogTemplate
 function createSimpleTradeSkillExporterWindow()
 	local frame = CreateFrame("Frame", "SimpleTradeSkillExporterWindow", UIParent, "BasicFrameTemplateWithInset")
-	-- Look to switch to UIPanelDialogTemplate
 	frame:SetSize(640, 480)
 	frame:SetPoint("CENTER")
 	frame:SetMovable(true)
