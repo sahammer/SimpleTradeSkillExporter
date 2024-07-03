@@ -4,5 +4,6 @@
 ## Notes: A simple trade skill exporter
 ## Version: @project-version@
 ## X-Curse-Project-ID: 1048094
+## X-Wago-ID: YK9EjOKL
 
 SimpleTradeSkillExporter.lua
