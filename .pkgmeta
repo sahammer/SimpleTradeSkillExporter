@@ -6,3 +6,5 @@ move-folders:
 ignore:
   - README.md
   - LICENSE
+
+changelog-title: SimpleTradeSkillExporter
