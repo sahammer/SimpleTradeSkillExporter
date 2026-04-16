@@ -1,4 +1,4 @@
-## Interface: 40400
+## Interface: 50503
 ## Title: SimpleTradeSkillExporter |cFF00FF00@project-version@|r
 ## Author: Hamma / GrumpyOldLisian
 ## Notes: A simple trade skill exporter
