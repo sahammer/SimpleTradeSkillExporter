@@ -1,6 +1,11 @@
 # 1.0.4
-- Add support for Wago release
-- Add space between Addon Title & Version
+Updates SimpleTradeSkillExporter to support Mists of Pandaria Classic (5.5.x).
+
+### Changes
+
+- **Interface version** bumped from `40400` (Cataclysm) to `50503` (MoP Classic 5.5.x)
+- **Wowhead URLs** updated from `/cata/` to `/mop-classic/` for CSV and Markdown exports
+- **Load notification** added — prints a confirmation message to chat on login with a hint to type `/tsexport help`
 
 # 1.0.3
 - Add support for Wago release
