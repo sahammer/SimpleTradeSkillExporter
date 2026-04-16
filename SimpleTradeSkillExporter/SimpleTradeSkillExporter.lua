@@ -1,3 +1,12 @@
+local loadedFrame = CreateFrame("Frame")
+loadedFrame:RegisterEvent("ADDON_LOADED")
+loadedFrame:SetScript("OnEvent", function(self, event, addonName)
+	if addonName == "SimpleTradeSkillExporter" then
+		print("\124cff00FF00SimpleTradeSkillExporter\124r loaded. Type \124cff00FF00/tsexport help\124r for usage.")
+		self:UnregisterEvent("ADDON_LOADED")
+	end
+end)
+
 SLASH_SIMPLETRADESKILLEXPORTER1 = "/tsexport"
 SlashCmdList["SIMPLETRADESKILLEXPORTER"] = function(msg)
 	if msg == "help" then
@@ -20,10 +29,10 @@ SlashCmdList["SIMPLETRADESKILLEXPORTER"] = function(msg)
 					local itemLink = getItemLink(i)
 					if itemLink then
 						if msg == "csv" then
-							text = text .. '=HYPERLINK("https://wowhead.com/cata/' .. itemLink .. '";"' .. name .. '")\n'
+							text = text .. '=HYPERLINK("https://wowhead.com/mop-classic/' .. itemLink .. '";"' .. name .. '")\n'
 						elseif msg == "markdown" then
 							text = text ..
-							"- " .. "[" .. name .. "]" .. "(" .. "https://wowhead.com/cata/" .. itemLink .. ")" .. '\n'
+							"- " .. "[" .. name .. "]" .. "(" .. "https://wowhead.com/mop-classic/" .. itemLink .. ")" .. '\n'
 						else
 							text = text .. name .. "\n"
 						end

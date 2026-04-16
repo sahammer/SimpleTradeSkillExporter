@@ -3,8 +3,19 @@ package-as: SimpleTradeSkillExporter
 move-folders:
     SimpleTradeSkillExporter/SimpleTradeSkillExporter: SimpleTradeSkillExporter
 
-ignore:
-  - README.md
-  - LICENSE
+manual-changelog:
+    filename: CHANGELOG.md
+    markup-type: markdown
 
-changelog-title: SimpleTradeSkillExporter
+ignore:
+    - .github
+    - .vscode
+    - .luacheckrc
+    - .luarc.json
+    - .editorconfig
+    - .stylua.toml
+    - .gitignore
+    - README.md
+    - CHANGELOG.md
+    - LICENSE
+    - tests/
