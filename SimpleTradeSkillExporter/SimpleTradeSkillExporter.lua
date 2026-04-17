@@ -65,12 +65,11 @@ openSimpleTradeSkillExporterWindow = function(tradeskillName, rank, text, recipe
 	if not SimpleTradeSkillExporterWindow then
 		createSimpleTradeSkillExporterWindow()
 	end
-	local playerName, realm = UnitName("player")
+	local playerName = UnitName("player")
 	local playerRace = UnitRace("player")
 	local playerClass = UnitClass("player")
 	local playerLevel = UnitLevel("player")
-	local guildName, guildRankName, guildRankIndex = GetGuildInfo("player")
-	local gameVersion = GetBuildInfo();
+	local guildName = GetGuildInfo("player")
 	local serverName = GetRealmName();
 	if (guildName == nil) then
 		guildName = '-'
@@ -139,7 +138,7 @@ createSimpleTradeSkillExporterWindow = function()
 end
 
 getItemLink = function(index)
-	local itemLink, itemID, name
+	local itemLink, itemID
 	itemLink = GetTradeSkillItemLink(index)
 	if itemLink then
 		itemID = itemLink:match("item:(%d+)")
