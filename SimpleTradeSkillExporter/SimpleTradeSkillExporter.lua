@@ -1,8 +1,20 @@
+-- Map each supported WoW flavor to its Wowhead base URL.
+-- WOW_PROJECT_ID is a client-injected global identifying which game flavor is running.
+local wowheadUrls = {
+	[WOW_PROJECT_MISTS_CLASSIC]           = "https://wowhead.com/mop-classic/",
+	[WOW_PROJECT_CATACLYSM_CLASSIC]       = "https://wowhead.com/cata/",
+	[WOW_PROJECT_WRATH_CLASSIC]           = "https://wowhead.com/wotlk/",
+	[WOW_PROJECT_BURNING_CRUSADE_CLASSIC] = "https://wowhead.com/tbc/",
+	[WOW_PROJECT_CLASSIC]                 = "https://wowhead.com/classic/",
+}
+local wowheadBase = wowheadUrls[WOW_PROJECT_ID]
+
 local loadedFrame = CreateFrame("Frame")
 loadedFrame:RegisterEvent("ADDON_LOADED")
 loadedFrame:SetScript("OnEvent", function(self, event, addonName)
 	if addonName == "SimpleTradeSkillExporter" then
-		print("\124cff00FF00SimpleTradeSkillExporter\124r loaded. Type \124cff00FF00/tsexport help\124r for usage.")
+		local version = GetAddOnMetadata("SimpleTradeSkillExporter", "Version") or "unknown"
+		print("\124cff00FF00SimpleTradeSkillExporter v" .. version .. "\124r loaded. Type \124cff00FF00/tsexport help\124r for usage.")
 		self:UnregisterEvent("ADDON_LOADED")
 	end
 end)
@@ -29,10 +41,10 @@ SlashCmdList["SIMPLETRADESKILLEXPORTER"] = function(msg)
 					local itemLink = getItemLink(i)
 					if itemLink then
 						if msg == "csv" then
-							text = text .. '=HYPERLINK("https://wowhead.com/mop-classic/' .. itemLink .. '";"' .. name .. '")\n'
+							text = text .. '=HYPERLINK("' .. wowheadBase .. itemLink .. '";"' .. name .. '")\n'
 						elseif msg == "markdown" then
 							text = text ..
-							"- " .. "[" .. name .. "]" .. "(" .. "https://wowhead.com/mop-classic/" .. itemLink .. ")" .. '\n'
+							"- " .. "[" .. name .. "]" .. "(" .. wowheadBase .. itemLink .. ")" .. '\n'
 						else
 							text = text .. name .. "\n"
 						end
