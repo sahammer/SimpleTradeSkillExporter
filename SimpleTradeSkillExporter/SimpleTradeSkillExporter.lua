@@ -1,3 +1,7 @@
+-- addonName: the addon's folder name injected by the WoW client.
+-- tse: a shared namespace table for this addon; passed to every file via `...`.
+local addonName, tse = ...
+
 -- Map each supported WoW flavor to its Wowhead base URL.
 -- WOW_PROJECT_ID is a client-injected global identifying which game flavor is running.
 local wowheadUrls = {
@@ -7,7 +11,7 @@ local wowheadUrls = {
 	[WOW_PROJECT_BURNING_CRUSADE_CLASSIC] = "https://wowhead.com/tbc/",
 	[WOW_PROJECT_CLASSIC]                 = "https://wowhead.com/classic/",
 }
-local wowheadBase = wowheadUrls[WOW_PROJECT_ID]
+tse.wowheadBase = wowheadUrls[WOW_PROJECT_ID]
 
 local getItemLink
 local openSimpleTradeSkillExporterWindow
@@ -15,9 +19,9 @@ local createSimpleTradeSkillExporterWindow
 
 local loadedFrame = CreateFrame("Frame")
 loadedFrame:RegisterEvent("ADDON_LOADED")
-loadedFrame:SetScript("OnEvent", function(self, event, addonName)
-	if addonName == "SimpleTradeSkillExporter" then
-		local version = GetAddOnMetadata("SimpleTradeSkillExporter", "Version") or "unknown"
+loadedFrame:SetScript("OnEvent", function(self, event, loadedAddon)
+	if loadedAddon == addonName then
+		local version = GetAddOnMetadata(addonName, "Version") or "unknown"
 		print("\124cff00FF00SimpleTradeSkillExporter v" .. version .. "\124r loaded. Type \124cff00FF00/tsexport help\124r for usage.")
 		self:UnregisterEvent("ADDON_LOADED")
 	end
@@ -33,6 +37,10 @@ SlashCmdList["SIMPLETRADESKILLEXPORTER"] = function(msg)
 		print("\124cff00FF00tsexport:\124r Type '/tsexport csv' to export a Comma Separated Value formatted list")
 		print("\124cff00FF00tsexport:\124r Type '/tsexport markdown' to export a Markdown formatted list")
 	else
+		if (msg == "csv" or msg == "markdown") and not tse.wowheadBase then
+			print("\124cffFF0000Error:\124r CSV and Markdown exports are not supported on this version of WoW.")
+			return
+		end
 		local tsName, tsRank, _ = GetTradeSkillLine()
 		if (tsRank == 0 and tsRank == 0) then
 			print("\124cffFF0000Error:\124r Must open a tradeskill window. Type /tsexport help for more information.")
@@ -45,10 +53,10 @@ SlashCmdList["SIMPLETRADESKILLEXPORTER"] = function(msg)
 					local itemLink = getItemLink(i)
 					if itemLink then
 						if msg == "csv" then
-							text = text .. '=HYPERLINK("' .. wowheadBase .. itemLink .. '";"' .. name .. '")\n'
+							text = text .. '=HYPERLINK("' .. tse.wowheadBase .. itemLink .. '","' .. name .. '")\n'
 						elseif msg == "markdown" then
 							text = text ..
-							"- " .. "[" .. name .. "]" .. "(" .. wowheadBase .. itemLink .. ")" .. '\n'
+							"- " .. "[" .. name .. "]" .. "(" .. tse.wowheadBase .. itemLink .. ")" .. '\n'
 						else
 							text = text .. name .. "\n"
 						end
@@ -75,25 +83,25 @@ openSimpleTradeSkillExporterWindow = function(tradeskillName, rank, text, recipe
 		guildName = '-'
 	end
 	local editText =
-		"Player: " .. playerName .. "," .. " Level " .. playerLevel .. " " .. playerRace .. " " .. playerClass .. "\n" ..
-		"Guild: " .. guildName .. "\n" ..
-		"Server: " .. serverName .. "\n"
+		"Player: " .. playerName .. ", Level " .. playerLevel .. " " .. playerRace .. " " .. playerClass .. "  \n" ..
+		"Guild: " .. guildName .. "  \n" ..
+		"Server: " .. serverName .. "  \n"
 	if (rank > 0) then
 		SimpleTradeSkillExporterWindow.title:SetText(tradeskillName ..
 		" skill " .. rank .. " - " .. recipeCount .. " recipes - Press CTRL-C to copy.")
-		editText = editText .. tradeskillName .. " skill " .. rank .. ", " .. recipeCount .. " total recipes" .. "\n"
+		editText = editText .. tradeskillName .. " skill " .. rank .. ", " .. recipeCount .. " total recipes" .. "  \n"
 	end
 	editText = editText .. "---------------------" .. "\n" .. text
 	if exportType then
 		if exportType == "markdown" then
 			editText =
 				"**Player:** " ..
-				playerName .. "," .. " Level " .. playerLevel .. " " .. playerRace .. " " .. playerClass .. "\n" ..
-				"**Guild:** " .. guildName .. "\n" ..
-				"**Server:** " .. serverName .. "\n"
+				playerName .. ", Level " .. playerLevel .. " " .. playerRace .. " " .. playerClass .. "  \n" ..
+				"**Guild:** " .. guildName .. "  \n" ..
+				"**Server:** " .. serverName .. "  \n"
 			if (rank > 0) then
 				editText = editText ..
-				"**" .. tradeskillName .. ":** Skill " .. rank .. ", " .. recipeCount .. " total recipes" .. "\n"
+				"**" .. tradeskillName .. ":** Skill " .. rank .. ", " .. recipeCount .. " total recipes" .. "  \n"
 			end
 			editText = editText .. "\n" .. text
 		elseif exportType == "csv" then
