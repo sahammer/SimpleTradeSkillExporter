@@ -8,8 +8,8 @@ globals = {
     'SLASH_SIMPLETRADESKILLEXPORTER1',
     'SimpleTradeSkillExporterWindow',
     'SimpleTradeSkillExporterScrollFrame',
-    'SlashCmdList',
     'SimpleTradeSkillExporterEditBox',
+    'SlashCmdList',
 }
 read_globals = {
     'ABANDON_PET',

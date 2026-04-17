@@ -13,8 +13,52 @@ local wowheadUrls = {
 }
 tse.wowheadBase = wowheadUrls[WOW_PROJECT_ID]
 
+-- Minimum item ID for crafted items introduced in each expansion.
+-- Item IDs are assigned sequentially as content is added, making them a reliable expansion signal.
+-- Vanilla has no floor since there are no prior expansions to filter out.
+local expansionItemIdFloors = {
+	[WOW_PROJECT_MISTS_CLASSIC]           = 71000,
+	[WOW_PROJECT_CATACLYSM_CLASSIC]       = 52000,
+	[WOW_PROJECT_WRATH_CLASSIC]           = 35000,
+	[WOW_PROJECT_BURNING_CRUSADE_CLASSIC] = 24000,
+	[WOW_PROJECT_CLASSIC]                 = nil,
+}
+tse.expansionItemIdFloor = expansionItemIdFloors[WOW_PROJECT_ID]
+
 local openExportWindow
 local createExportWindow
+
+-- Parses the slash command message into export format and whether to include all expansions.
+-- Examples: "csv all" -> ("csv", true), "markdown" -> ("markdown", false), "" -> ("", false)
+local function parseCommand(msg)
+	local parts = {}
+	for part in msg:gmatch("%S+") do
+		table.insert(parts, part)
+	end
+
+	local exportAll = parts[#parts] == "all"
+	if exportAll then table.remove(parts, #parts) end
+
+	return parts[1] or "", exportAll
+end
+
+-- Returns the item ID of the item crafted by the recipe at the given index, or nil.
+local function getCraftedItemId(index)
+	local itemLink = GetTradeSkillItemLink(index)
+	if not itemLink then return nil end
+	local itemId = itemLink:match("item:(%d+)")
+	return itemId and tonumber(itemId) or nil
+end
+
+-- Returns true if the recipe at index belongs to the current expansion.
+-- Uses the crafted item's ID as a proxy for expansion (IDs are assigned sequentially).
+-- Includes the recipe if the item ID cannot be determined.
+local function isCurrentExpansionRecipe(index)
+	if not tse.expansionItemIdFloor then return true end
+	local itemId = getCraftedItemId(index)
+	if itemId == nil then return true end
+	return itemId >= tse.expansionItemIdFloor
+end
 
 -- Returns player info as a table for use in header building.
 local function getPlayerInfo()
@@ -44,21 +88,18 @@ local function buildHeader(player, skillName, rank, recipeCount, exportType)
 
 	if exportType == "markdown" then
 		header =
-			"**Player:** " ..
-			player.name .. ", Level " .. player.level .. " " .. player.race .. " " .. player.class .. "  \n" ..
+			"**Player:** " .. player.name .. ", Level " .. player.level .. " " .. player.race .. " " .. player.class .. "  \n" ..
 			"**Guild:** " .. player.guild .. "  \n" ..
 			"**Server:** " .. player.server .. "  \n"
 		if rank > 0 then
-			header = header ..
-			"**" .. skillName .. ":** Skill " .. rank .. ", " .. recipeCount .. " total recipes" .. "  \n"
+			header = header .. "**" .. skillName .. ":** Skill " .. rank .. ", " .. recipeCount .. " total recipes" .. "  \n"
 		end
 		header = header .. "\n"
 	elseif exportType == "csv" then
 		header = ""
 	else
 		header =
-			"Player: " ..
-			player.name .. ", Level " .. player.level .. " " .. player.race .. " " .. player.class .. "  \n" ..
+			"Player: " .. player.name .. ", Level " .. player.level .. " " .. player.race .. " " .. player.class .. "  \n" ..
 			"Guild: " .. player.guild .. "  \n" ..
 			"Server: " .. player.server .. "  \n"
 		if rank > 0 then
@@ -72,13 +113,14 @@ end
 
 -- Prints available slash commands to the chat window.
 local function printHelp()
-	print(
-	"\124cff00FF00tsexport:\124r \124cff00FF00S\124rimple \124cff00FF00T\124rradeskill \124cff00FF00E\124rxporter - Help")
+	print("\124cff00FF00tsexport:\124r \124cff00FF00S\124rimple \124cff00FF00T\124rradeskill \124cff00FF00E\124rxporter - Help")
 	print("\124cff00FF00tsexport:\124r Type '/tsexport help' to show this message")
-	print("\124cff00FF00tsexport:\124r Open a tradeskill window then type one of the following commands")
-	print("\124cff00FF00tsexport:\124r Type '/tsexport' to export a simple text list")
-	print("\124cff00FF00tsexport:\124r Type '/tsexport csv' to export a Comma Separated Value formatted list")
-	print("\124cff00FF00tsexport:\124r Type '/tsexport markdown' to export a Markdown formatted list")
+	print("\124cff00FF00tsexport:\124r Open a tradeskill window, then type one of the following commands")
+	print("\124cff00FF00tsexport:\124r By default, only recipes for the current expansion are exported")
+	print("\124cff00FF00tsexport:\124r Append '\124cff00FF00all\124r' to include recipes from all expansions")
+	print("\124cff00FF00tsexport:\124r '/tsexport' or '/tsexport all' - plain text list")
+	print("\124cff00FF00tsexport:\124r '/tsexport csv' or '/tsexport csv all' - Comma Separated Value list")
+	print("\124cff00FF00tsexport:\124r '/tsexport markdown' or '/tsexport markdown all' - Markdown list")
 end
 
 -- Returns the Wowhead query string for a tradeskill entry, or nil if it cannot be resolved.
@@ -116,8 +158,7 @@ loadedFrame:RegisterEvent("ADDON_LOADED")
 loadedFrame:SetScript("OnEvent", function(self, event, loadedAddon)
 	if loadedAddon == addonName then
 		local version = GetAddOnMetadata(addonName, "Version") or "unknown"
-		print("\124cff00FF00SimpleTradeSkillExporter v" ..
-		version .. "\124r loaded. Type \124cff00FF00/tsexport help\124r for usage.")
+		print("\124cff00FF00SimpleTradeSkillExporter v" .. version .. "\124r loaded. Type \124cff00FF00/tsexport help\124r for usage.")
 		self:UnregisterEvent("ADDON_LOADED")
 	end
 end)
@@ -129,14 +170,16 @@ SlashCmdList["SIMPLETRADESKILLEXPORTER"] = function(msg)
 		return
 	end
 
-	if (msg == "csv" or msg == "markdown") and not tse.wowheadBase then
-		print("\124cffFF0000Error:\124r CSV and Markdown exports are not supported on this version of WoW.")
-		return
-	end
-
 	local skillName, skillRank, _ = GetTradeSkillLine()
 	if skillRank == 0 then
 		print("\124cffFF0000Error:\124r Must open a tradeskill window. Type /tsexport help for more information.")
+		return
+	end
+
+	local exportType, exportAll = parseCommand(msg)
+
+	if (exportType == "csv" or exportType == "markdown") and not tse.wowheadBase then
+		print("\124cffFF0000Error:\124r CSV and Markdown exports are not supported on this version of WoW.")
 		return
 	end
 
@@ -145,15 +188,17 @@ SlashCmdList["SIMPLETRADESKILLEXPORTER"] = function(msg)
 	for i = 1, GetNumTradeSkills() do
 		local name, entryType, _, _, _, _ = GetTradeSkillInfo(i)
 		if name and entryType ~= "header" then
-			local itemLink = getItemLink(i)
-			if itemLink then
-				recipeText = recipeText .. buildRecipeEntry(name, itemLink, msg)
+			if exportAll or isCurrentExpansionRecipe(i) then
+				local itemLink = getItemLink(i)
+				if itemLink then
+					recipeText = recipeText .. buildRecipeEntry(name, itemLink, exportType)
+				end
+				recipeCount = recipeCount + 1
 			end
-			recipeCount = recipeCount + 1
 		end
 	end
 
-	openExportWindow(skillName, skillRank, recipeText, recipeCount, msg)
+	openExportWindow(skillName, skillRank, recipeText, recipeCount, exportType)
 end
 
 openExportWindow = function(skillName, rank, recipeText, recipeCount, exportType)

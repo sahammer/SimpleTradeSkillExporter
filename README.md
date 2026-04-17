@@ -16,9 +16,14 @@ Open any trade skill window and type `/tsexport`.
 
 Use CTRL-C to copy the output and paste it wherever you need it.
 
+By default, only recipes for the current expansion are exported. Append `all` to include recipes from all expansions.
+
 | Command | Output |
 |---------|--------|
-| `/tsexport` | Plain text list of recipe names |
-| `/tsexport markdown` | Markdown list with Wowhead links |
-| `/tsexport csv` | CSV with Wowhead hyperlinks for spreadsheet import |
+| `/tsexport` | Plain text — current expansion only |
+| `/tsexport all` | Plain text — all expansions |
+| `/tsexport markdown` | Markdown with Wowhead links — current expansion only |
+| `/tsexport markdown all` | Markdown with Wowhead links — all expansions |
+| `/tsexport csv` | CSV with Wowhead hyperlinks — current expansion only |
+| `/tsexport csv all` | CSV with Wowhead hyperlinks — all expansions |
 | `/tsexport help` | Show available commands |
