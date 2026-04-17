@@ -9,6 +9,10 @@ local wowheadUrls = {
 }
 local wowheadBase = wowheadUrls[WOW_PROJECT_ID]
 
+local getItemLink
+local openSimpleTradeSkillExporterWindow
+local createSimpleTradeSkillExporterWindow
+
 local loadedFrame = CreateFrame("Frame")
 loadedFrame:RegisterEvent("ADDON_LOADED")
 loadedFrame:SetScript("OnEvent", function(self, event, addonName)
@@ -57,7 +61,7 @@ SlashCmdList["SIMPLETRADESKILLEXPORTER"] = function(msg)
 	end
 end
 
-function openSimpleTradeSkillExporterWindow(tradeskillName, rank, text, recipeCount, exportType)
+openSimpleTradeSkillExporterWindow = function(tradeskillName, rank, text, recipeCount, exportType)
 	if not SimpleTradeSkillExporterWindow then
 		createSimpleTradeSkillExporterWindow()
 	end
@@ -103,7 +107,7 @@ function openSimpleTradeSkillExporterWindow(tradeskillName, rank, text, recipeCo
 end
 
 -- Look to switch to UIPanelDialogTemplate
-function createSimpleTradeSkillExporterWindow()
+createSimpleTradeSkillExporterWindow = function()
 	local frame = CreateFrame("Frame", "SimpleTradeSkillExporterWindow", UIParent, "BasicFrameTemplateWithInset")
 	frame:SetSize(640, 480)
 	frame:SetPoint("CENTER")
@@ -134,7 +138,7 @@ function createSimpleTradeSkillExporterWindow()
 	frame.scrollFrame:SetScrollChild(frame.editBox)
 end
 
-function getItemLink(index)
+getItemLink = function(index)
 	local itemLink, itemID, name
 	itemLink = GetTradeSkillItemLink(index)
 	if itemLink then
