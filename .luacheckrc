@@ -9,6 +9,7 @@ globals = {
     'SimpleTradeSkillExporterWindow',
     'SimpleTradeSkillExporterScrollFrame',
     'SlashCmdList',
+    'SimpleTradeSkillExporterEditBox',
 }
 read_globals = {
     'ABANDON_PET',
