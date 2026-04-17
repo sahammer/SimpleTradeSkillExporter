@@ -1,4 +1,5 @@
 package-as: SimpleTradeSkillExporter
+enable-toc-creation: yes
 
 move-folders:
     SimpleTradeSkillExporter/SimpleTradeSkillExporter: SimpleTradeSkillExporter

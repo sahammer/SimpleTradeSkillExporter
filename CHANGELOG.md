@@ -1,3 +1,9 @@
+# 1.1.0
+
+- Added support for TBC, Wrath, Cataclysm, and Vanilla Classic
+- Recipes now export for the current expansion by default — append `all` to include all expansions
+- CSV exports now compatible with Excel and Google Sheets
+
 # 1.0.4
 Updates SimpleTradeSkillExporter to support Mists of Pandaria Classic (5.5.x).
 
