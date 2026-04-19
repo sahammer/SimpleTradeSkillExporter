@@ -3,7 +3,7 @@
 -- Description: Exports trade skill recipes to plain text, CSV, or Markdown format.
 --              Supports all classic WoW flavors (Vanilla, TBC, Wrath, Cata, MoP).
 --              Use /tsexport or the Export button on the tradeskill window.
--- Download on: Curse, Wago.io, GitHub
+
 -- addonName: the addon's folder name injected by the WoW client.
 -- tse: a shared namespace table for this addon; passed to every file via `...`.
 local addonName, tse = ...
@@ -19,9 +19,9 @@ local wowheadUrls = {
 }
 tse.wowheadBase = wowheadUrls[WOW_PROJECT_ID]
 
--- Minimum item ID for crafted items introduced in each expansion.
--- Item IDs are assigned sequentially as content is added, making them a reliable expansion signal.
--- Vanilla has no floor since there are no prior expansions to filter out.
+-- Minimum output ID for crafted items/enchants introduced in each expansion.
+-- Item IDs and enchant spell IDs are both assigned sequentially, so the same
+-- floor applies to both. Vanilla has no floor — all recipes are always included.
 local expansionItemIdFloors = {
 	[WOW_PROJECT_MISTS_CLASSIC]           = 71000,
 	[WOW_PROJECT_CATACLYSM_CLASSIC]       = 52000,
@@ -31,16 +31,13 @@ local expansionItemIdFloors = {
 }
 tse.expansionItemIdFloor = expansionItemIdFloors[WOW_PROJECT_ID]
 
--- Session state for the export options popup — persists last-used format and scope.
+-- Session state — persists last-used format and scope within a play session.
 local selectedExportFormat = "text"
 local selectedExportAll = false
 
-local exportWindow       -- main export text frame, created lazily on first export
-local exportOptionsFrame -- export options popup, created lazily on first button click
-
+local exportWindow
 local openExportWindow
 local createExportWindow
-local createExportOptionsFrame
 
 -- Parses the slash command message into export format and whether to include all expansions.
 -- Examples: "csv all" -> ("csv", true), "markdown" -> ("markdown", false), "" -> ("", false)
@@ -53,7 +50,7 @@ local function parseCommand(msg)
 	local exportAll = parts[#parts] == "all"
 	if exportAll then table.remove(parts, #parts) end
 
-	return parts[1] or "", exportAll
+	return parts[1] or "text", exportAll
 end
 
 -- Returns the numeric ID of the crafted output for a recipe at the given index, or nil.
@@ -104,21 +101,18 @@ local function buildHeader(player, skillName, rank, recipeCount, exportType)
 
 	if exportType == "markdown" then
 		header =
-			"**Player:** " ..
-			player.name .. ", Level " .. player.level .. " " .. player.race .. " " .. player.class .. "  \n" ..
+			"**Player:** " .. player.name .. ", Level " .. player.level .. " " .. player.race .. " " .. player.class .. "  \n" ..
 			"**Guild:** " .. player.guild .. "  \n" ..
 			"**Server:** " .. player.server .. "  \n"
 		if rank > 0 then
-			header = header ..
-			"**" .. skillName .. ":** Skill " .. rank .. ", " .. recipeCount .. " total recipes" .. "  \n"
+			header = header .. "**" .. skillName .. ":** Skill " .. rank .. ", " .. recipeCount .. " total recipes" .. "  \n"
 		end
 		header = header .. "\n"
 	elseif exportType == "csv" then
 		header = ""
 	else
 		header =
-			"Player: " ..
-			player.name .. ", Level " .. player.level .. " " .. player.race .. " " .. player.class .. "  \n" ..
+			"Player: " .. player.name .. ", Level " .. player.level .. " " .. player.race .. " " .. player.class .. "  \n" ..
 			"Guild: " .. player.guild .. "  \n" ..
 			"Server: " .. player.server .. "  \n"
 		if rank > 0 then
@@ -132,8 +126,7 @@ end
 
 -- Prints available slash commands to the chat window.
 local function printHelp()
-	print(
-	"\124cff00FF00tsexport:\124r \124cff00FF00S\124rimple \124cff00FF00T\124rradeskill \124cff00FF00E\124rxporter - Help")
+	print("\124cff00FF00tsexport:\124r \124cff00FF00S\124rimple \124cff00FF00T\124rradeskill \124cff00FF00E\124rxporter - Help")
 	print("\124cff00FF00tsexport:\124r Type '/tsexport help' to show this message")
 	print("\124cff00FF00tsexport:\124r Open a tradeskill window, then type one of the following commands")
 	print("\124cff00FF00tsexport:\124r By default, only recipes for the current expansion are exported")
@@ -173,129 +166,54 @@ local function getItemLink(index)
 	return nil
 end
 
--- Builds and opens the export window for the given format and scope.
-local function runExport(exportType, exportAll)
+-- Queries the open trade skill window and stores all recipe data in tse.recipeData.
+-- Each recipe captures its name, Wowhead link, and whether it belongs to the current expansion.
+-- Storing this upfront means format/scope switching in the window never needs to re-query the API.
+local function captureRecipeData()
 	local skillName, skillRank = GetTradeSkillLine()
-	if skillRank == 0 then
-		print("\124cffFF0000Error:\124r Must open a tradeskill window. Type /tsexport help for more information.")
-		return
+	if skillRank == 0 then return false end
+
+	local recipes = {}
+	for i = 1, GetNumTradeSkills() do
+		local name, entryType = GetTradeSkillInfo(i)
+		if name and entryType ~= "header" then
+			table.insert(recipes, {
+				name             = name,
+				itemLink         = getItemLink(i),
+				isCurrentExpansion = isCurrentExpansionRecipe(i),
+			})
+		end
 	end
 
+	tse.recipeData = {
+		skillName = skillName,
+		skillRank = skillRank,
+		player    = getPlayerInfo(),
+		recipes   = recipes,
+	}
+
+	return true
+end
+
+-- Queries trade skill data, sets the active format/scope, and opens the export window.
+local function runExport(exportType, exportAll)
 	if (exportType == "csv" or exportType == "markdown") and not tse.wowheadBase then
 		print("\124cffFF0000Error:\124r CSV and Markdown exports are not supported on this version of WoW.")
 		return
 	end
 
-	local recipeText = ""
-	local recipeCount = 0
-	for i = 1, GetNumTradeSkills() do
-		local name, entryType = GetTradeSkillInfo(i)
-		if name and entryType ~= "header" then
-			if exportAll or isCurrentExpansionRecipe(i) then
-				local itemLink = getItemLink(i)
-				if itemLink then
-					recipeText = recipeText .. buildRecipeEntry(name, itemLink, exportType)
-				end
-				recipeCount = recipeCount + 1
-			end
-		end
+	if not captureRecipeData() then
+		print("\124cffFF0000Error:\124r Must open a tradeskill window. Type /tsexport help for more information.")
+		return
 	end
 
-	openExportWindow(skillName, skillRank, recipeText, recipeCount, exportType)
+	selectedExportFormat = exportType
+	selectedExportAll    = exportAll
+
+	openExportWindow()
 end
 
--- Creates and shows the export options popup.
-createExportOptionsFrame = function()
-	local frame = CreateFrame("Frame", nil, UIParent, "BasicFrameTemplateWithInset")
-	frame:SetSize(230, 155)
-	frame:SetPoint("CENTER")
-	frame:SetMovable(true)
-	frame:EnableMouse(true)
-	frame:SetClampedToScreen(true)
-	frame:SetFrameStrata("DIALOG")
-	frame:RegisterForDrag("LeftButton")
-	frame:SetScript("OnDragStart", frame.StartMoving)
-	frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
-
-	frame.title = frame:CreateFontString(nil, "OVERLAY")
-	frame.title:SetFontObject("GameFontHighlight")
-	frame.title:SetPoint("LEFT", frame.TitleBg, 5, 0)
-	frame.title:SetText("Export Recipes")
-
-	-- Format label
-	local formatLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	formatLabel:SetPoint("TOPLEFT", frame.InsetBg, "TOPLEFT", 10, -12)
-	formatLabel:SetText("Format:")
-
-	-- Format toggle buttons — clicking one selects it and locks it pushed.
-	local formats = {
-		{ label = "Text",     value = "text" },
-		{ label = "CSV",      value = "csv" },
-		{ label = "Markdown", value = "markdown" },
-	}
-
-	frame.formatButtons = {}
-
-	local function updateFormatButtons()
-		for _, btn in ipairs(frame.formatButtons) do
-			btn:SetButtonState(btn.value == selectedExportFormat and "PUSHED" or "NORMAL",
-				btn.value == selectedExportFormat)
-		end
-	end
-
-	for i, fmt in ipairs(formats) do
-		local btn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		btn:SetSize(65, 22)
-		btn:SetText(fmt.label)
-		btn.value = fmt.value
-
-		if i == 1 then
-			btn:SetPoint("TOPLEFT", formatLabel, "BOTTOMLEFT", -2, -6)
-		else
-			btn:SetPoint("LEFT", frame.formatButtons[i - 1], "RIGHT", 4, 0)
-		end
-
-		if (fmt.value == "csv" or fmt.value == "markdown") and not tse.wowheadBase then
-			btn:Disable()
-		else
-			btn:SetScript("OnClick", function()
-				selectedExportFormat = btn.value
-				updateFormatButtons()
-			end)
-		end
-
-		frame.formatButtons[i] = btn
-	end
-
-	-- "Include all expansions" checkbox — hidden on Vanilla where all recipes are always included.
-	local checkbox = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
-	checkbox:SetPoint("TOPLEFT", frame.formatButtons[1], "BOTTOMLEFT", 2, -8)
-	checkbox:SetChecked(selectedExportAll)
-	checkbox.text:SetText("Include all expansions")
-	checkbox:SetScript("OnClick", function()
-		selectedExportAll = checkbox:GetChecked()
-	end)
-	frame.allCheckbox = checkbox
-
-	if not tse.expansionItemIdFloor then
-		checkbox:Hide()
-	end
-
-	-- Export button
-	local exportBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-	exportBtn:SetSize(90, 24)
-	exportBtn:SetText("Export")
-	exportBtn:SetPoint("BOTTOM", frame.InsetBg, "BOTTOM", 0, 8)
-	exportBtn:SetScript("OnClick", function()
-		frame:Hide()
-		runExport(selectedExportFormat, selectedExportAll)
-	end)
-
-	updateFormatButtons()
-	exportOptionsFrame = frame
-end
-
--- Attaches the TSE button to TradeSkillFrame's title bar. Safe to call multiple times — creates once.
+-- Attaches the TSExport button to TradeSkillFrame's title bar. Safe to call multiple times — creates once.
 local function attachTradeSkillButton()
 	if tse.tradeSkillButton then return end
 
@@ -305,14 +223,7 @@ local function attachTradeSkillButton()
 	-- Anchor to the right edge of the portrait so the button sits in the title bar without overlapping it.
 	button:SetPoint("LEFT", TradeSkillFramePortrait, "RIGHT", 9, 12)
 	button:SetScript("OnClick", function()
-		if not exportOptionsFrame then
-			createExportOptionsFrame()
-		end
-		-- Sync checkbox to current session state when re-opening.
-		if exportOptionsFrame.allCheckbox then
-			exportOptionsFrame.allCheckbox:SetChecked(selectedExportAll)
-		end
-		exportOptionsFrame:Show()
+		runExport(selectedExportFormat, selectedExportAll)
 	end)
 
 	tse.tradeSkillButton = button
@@ -324,8 +235,7 @@ eventFrame:RegisterEvent("TRADE_SKILL_SHOW")
 eventFrame:SetScript("OnEvent", function(self, event, arg1)
 	if event == "ADDON_LOADED" and arg1 == addonName then
 		local version = GetAddOnMetadata(addonName, "Version") or "unknown"
-		print("\124cff00FF00SimpleTradeSkillExporter v" ..
-		version .. "\124r loaded. Type \124cff00FF00/tsexport help\124r for usage.")
+		print("\124cff00FF00SimpleTradeSkillExporter v" .. version .. "\124r loaded. Type \124cff00FF00/tsexport help\124r for usage.")
 		self:UnregisterEvent("ADDON_LOADED")
 	elseif event == "TRADE_SKILL_SHOW" then
 		attachTradeSkillButton()
@@ -343,21 +253,15 @@ SlashCmdList["SIMPLETRADESKILLEXPORTER"] = function(msg)
 	runExport(exportType, exportAll)
 end
 
-openExportWindow = function(skillName, rank, recipeText, recipeCount, exportType)
+-- Refreshes the export window title and edit box content from tse.recipeData
+-- using the current selectedExportFormat and selectedExportAll.
+openExportWindow = function()
 	if not exportWindow then
 		createExportWindow()
 	end
 
-	local player = getPlayerInfo()
-
-	if rank > 0 then
-		exportWindow.title:SetText(skillName .. " skill " .. rank .. " - " .. recipeCount .. " recipes")
-	end
-
-	local exportText = buildHeader(player, skillName, rank, recipeCount, exportType) .. recipeText
-
-	exportWindow.editBox:SetText(exportText)
-	exportWindow.editBox:HighlightText()
+	exportWindow.updateControls()
+	exportWindow.refresh()
 	exportWindow:Show()
 end
 
@@ -372,14 +276,64 @@ createExportWindow = function()
 	frame:RegisterForDrag("LeftButton")
 	frame:SetScript("OnDragStart", frame.StartMoving)
 	frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
+	frame:SetScript("OnShow", function() frame.updateControls() end)
 
 	frame.title = frame:CreateFontString(nil, "OVERLAY")
 	frame.title:SetFontObject("GameFontHighlight")
 	frame.title:SetPoint("LEFT", frame.TitleBg, 5, 0)
 
-	-- Scroll frame leaves 30px at the bottom for the button row.
+	-- Format toggle buttons and scope checkbox sit in a control bar at the top of the inset.
+	local formats = {
+		{ label = "Text",     value = "text" },
+		{ label = "CSV",      value = "csv" },
+		{ label = "Markdown", value = "markdown" },
+	}
+
+	frame.formatButtons = {}
+
+	for i, fmt in ipairs(formats) do
+		local btn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+		btn:SetSize(72, 22)
+		btn:SetText(fmt.label)
+		btn.value = fmt.value
+
+		if i == 1 then
+			btn:SetPoint("TOPLEFT", frame.InsetBg, "TOPLEFT", 4, -4)
+		else
+			btn:SetPoint("LEFT", frame.formatButtons[i - 1], "RIGHT", 4, 0)
+		end
+
+		if (fmt.value == "csv" or fmt.value == "markdown") and not tse.wowheadBase then
+			btn:Disable()
+		else
+			btn:SetScript("OnClick", function()
+				selectedExportFormat = btn.value
+				frame.updateControls()
+				frame.refresh()
+			end)
+		end
+
+		frame.formatButtons[i] = btn
+	end
+
+	-- "All expansions" checkbox — hidden on Vanilla where all recipes are always included.
+	local allCheckbox = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+	allCheckbox:SetPoint("LEFT", frame.formatButtons[#frame.formatButtons], "RIGHT", 10, 0)
+	allCheckbox:SetChecked(selectedExportAll)
+	allCheckbox.text:SetText("All expansions")
+	allCheckbox:SetScript("OnClick", function()
+		selectedExportAll = allCheckbox:GetChecked()
+		frame.refresh()
+	end)
+	frame.allCheckbox = allCheckbox
+
+	if not tse.expansionItemIdFloor then
+		allCheckbox:Hide()
+	end
+
+	-- Scroll frame sits below the control bar and above the bottom button row.
 	frame.scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-	frame.scrollFrame:SetPoint("TOPLEFT", frame.InsetBg, "TOPLEFT", 4, -8)
+	frame.scrollFrame:SetPoint("TOPLEFT", frame.InsetBg, "TOPLEFT", 4, -34)
 	frame.scrollFrame:SetPoint("BOTTOMRIGHT", frame.InsetBg, "BOTTOMRIGHT", -3, 30)
 	frame.scrollFrame.ScrollBar:SetPoint("TOPLEFT", frame.scrollFrame, "TOPRIGHT", -20, -22)
 	frame.scrollFrame.ScrollBar:SetPoint("BOTTOMRIGHT", frame.scrollFrame, "BOTTOMRIGHT", -15, 22)
@@ -418,6 +372,42 @@ createExportWindow = function()
 	closeBtn:SetText("Close")
 	closeBtn:SetPoint("BOTTOMRIGHT", frame.InsetBg, "BOTTOMRIGHT", -4, 4)
 	closeBtn:SetScript("OnClick", function() frame:Hide() end)
+
+	-- Syncs format button states and checkbox to current session state.
+	-- Selected button is locked pushed with gold text; others are normal with white text.
+	frame.updateControls = function()
+		for _, btn in ipairs(frame.formatButtons) do
+			local selected = btn.value == selectedExportFormat
+			btn:SetButtonState(selected and "PUSHED" or "NORMAL", selected)
+			btn:GetFontString():SetTextColor(selected and 1 or 1, selected and 1 or 0.82, selected and 1 or 0)
+		end
+		frame.allCheckbox:SetChecked(selectedExportAll)
+	end
+
+	-- Rebuilds export text from tse.recipeData using current format and scope.
+	frame.refresh = function()
+		if not tse.recipeData then return end
+		local data = tse.recipeData
+
+		local recipeText = ""
+		local recipeCount = 0
+		for _, recipe in ipairs(data.recipes) do
+			if selectedExportAll or recipe.isCurrentExpansion then
+				if recipe.itemLink then
+					recipeText = recipeText .. buildRecipeEntry(recipe.name, recipe.itemLink, selectedExportFormat)
+				end
+				recipeCount = recipeCount + 1
+			end
+		end
+
+		if data.skillRank > 0 then
+			frame.title:SetText(data.skillName .. " skill " .. data.skillRank .. " - " .. recipeCount .. " recipes")
+		end
+
+		local exportText = buildHeader(data.player, data.skillName, data.skillRank, recipeCount, selectedExportFormat) .. recipeText
+		frame.editBox:SetText(exportText)
+		frame.editBox:HighlightText()
+	end
 
 	exportWindow = frame
 end
