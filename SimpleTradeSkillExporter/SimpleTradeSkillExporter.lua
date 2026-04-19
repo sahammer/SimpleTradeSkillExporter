@@ -56,22 +56,24 @@ local function parseCommand(msg)
 	return parts[1] or "", exportAll
 end
 
--- Returns the item ID of the item crafted by the recipe at the given index, or nil.
-local function getCraftedItemId(index)
+-- Returns the numeric ID of the crafted output for a recipe at the given index, or nil.
+-- For most professions this is the item ID; for enchanting it is the enchant spell ID.
+-- Both are assigned sequentially, so the same expansion floor applies to both.
+local function getCraftedOutputId(index)
 	local itemLink = GetTradeSkillItemLink(index)
 	if not itemLink then return nil end
-	local itemId = itemLink:match("item:(%d+)")
-	return itemId and tonumber(itemId) or nil
+	local id = itemLink:match("item:(%d+)") or itemLink:match("enchant:(%d+)")
+	return id and tonumber(id) or nil
 end
 
 -- Returns true if the recipe at index belongs to the current expansion.
--- Uses the crafted item's ID as a proxy for expansion (IDs are assigned sequentially).
--- Includes the recipe if the item ID cannot be determined.
+-- Uses the crafted output ID as a proxy for expansion (IDs are assigned sequentially).
+-- Includes the recipe if the output ID cannot be determined.
 local function isCurrentExpansionRecipe(index)
 	if not tse.expansionItemIdFloor then return true end
-	local itemId = getCraftedItemId(index)
-	if itemId == nil then return true end
-	return itemId >= tse.expansionItemIdFloor
+	local outputId = getCraftedOutputId(index)
+	if outputId == nil then return true end
+	return outputId >= tse.expansionItemIdFloor
 end
 
 -- Returns player info as a table for use in header building.
