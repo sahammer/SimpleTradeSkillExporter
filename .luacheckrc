@@ -6,9 +6,6 @@ ignore = {
 }
 globals = {
     'SLASH_SIMPLETRADESKILLEXPORTER1',
-    'SimpleTradeSkillExporterWindow',
-    'SimpleTradeSkillExporterScrollFrame',
-    'SimpleTradeSkillExporterEditBox',
     'SlashCmdList',
 }
 read_globals = {
@@ -22326,6 +22323,7 @@ read_globals = {
     'TradeSkillFilterFrame_LoadSubClasses',
     'TradeSkillFilter_OnTextChanged',
     'TradeSkillFrame',
+    'TradeSkillFramePortrait',
     'TradeSkillFrameDecrement_OnClick',
     'TradeSkillFrameIncrement_OnClick',
     'TradeSkillFrame_Hide',

@@ -1,3 +1,9 @@
+-- SimpleTradeSkillExporter
+-- Author: Hamma
+-- Description: Exports trade skill recipes to plain text, CSV, or Markdown format.
+--              Supports all classic WoW flavors (Vanilla, TBC, Wrath, Cata, MoP).
+--              Use /tsexport or the Export button on the tradeskill window.
+-- Download on: Curse, Wago.io, GitHub
 -- addonName: the addon's folder name injected by the WoW client.
 -- tse: a shared namespace table for this addon; passed to every file via `...`.
 local addonName, tse = ...
@@ -25,8 +31,16 @@ local expansionItemIdFloors = {
 }
 tse.expansionItemIdFloor = expansionItemIdFloors[WOW_PROJECT_ID]
 
+-- Session state for the export options popup — persists last-used format and scope.
+local selectedExportFormat = "text"
+local selectedExportAll = false
+
+local exportWindow       -- main export text frame, created lazily on first export
+local exportOptionsFrame -- export options popup, created lazily on first button click
+
 local openExportWindow
 local createExportWindow
+local createExportOptionsFrame
 
 -- Parses the slash command message into export format and whether to include all expansions.
 -- Examples: "csv all" -> ("csv", true), "markdown" -> ("markdown", false), "" -> ("", false)
@@ -88,18 +102,21 @@ local function buildHeader(player, skillName, rank, recipeCount, exportType)
 
 	if exportType == "markdown" then
 		header =
-			"**Player:** " .. player.name .. ", Level " .. player.level .. " " .. player.race .. " " .. player.class .. "  \n" ..
+			"**Player:** " ..
+			player.name .. ", Level " .. player.level .. " " .. player.race .. " " .. player.class .. "  \n" ..
 			"**Guild:** " .. player.guild .. "  \n" ..
 			"**Server:** " .. player.server .. "  \n"
 		if rank > 0 then
-			header = header .. "**" .. skillName .. ":** Skill " .. rank .. ", " .. recipeCount .. " total recipes" .. "  \n"
+			header = header ..
+			"**" .. skillName .. ":** Skill " .. rank .. ", " .. recipeCount .. " total recipes" .. "  \n"
 		end
 		header = header .. "\n"
 	elseif exportType == "csv" then
 		header = ""
 	else
 		header =
-			"Player: " .. player.name .. ", Level " .. player.level .. " " .. player.race .. " " .. player.class .. "  \n" ..
+			"Player: " ..
+			player.name .. ", Level " .. player.level .. " " .. player.race .. " " .. player.class .. "  \n" ..
 			"Guild: " .. player.guild .. "  \n" ..
 			"Server: " .. player.server .. "  \n"
 		if rank > 0 then
@@ -113,7 +130,8 @@ end
 
 -- Prints available slash commands to the chat window.
 local function printHelp()
-	print("\124cff00FF00tsexport:\124r \124cff00FF00S\124rimple \124cff00FF00T\124rradeskill \124cff00FF00E\124rxporter - Help")
+	print(
+	"\124cff00FF00tsexport:\124r \124cff00FF00S\124rimple \124cff00FF00T\124rradeskill \124cff00FF00E\124rxporter - Help")
 	print("\124cff00FF00tsexport:\124r Type '/tsexport help' to show this message")
 	print("\124cff00FF00tsexport:\124r Open a tradeskill window, then type one of the following commands")
 	print("\124cff00FF00tsexport:\124r By default, only recipes for the current expansion are exported")
@@ -142,51 +160,34 @@ local function getItemLink(index)
 			return "spell=" .. tonumber(itemId)
 		else
 			print("|cffFF0000[TSE]: Unable to process entry " .. index)
-			local itemLinkRaw = GetTradeSkillItemLink(index)
-			local recipeLinkRaw = GetTradeSkillRecipeLink(index)
-			print(itemLinkRaw)
-			if itemLinkRaw then print(itemLinkRaw:gsub('\124', '\124\124')) end
-			print(recipeLinkRaw)
-			if recipeLinkRaw then print(recipeLinkRaw:gsub('\124', '\124\124')) end
+			local craftedLink = GetTradeSkillItemLink(index)
+			local spellLink = GetTradeSkillRecipeLink(index)
+			if craftedLink then print(craftedLink:gsub('\124', '\124\124')) end
+			if spellLink then print(spellLink:gsub('\124', '\124\124')) end
 			return nil
 		end
 	end
+
+	return nil
 end
 
-local loadedFrame = CreateFrame("Frame")
-loadedFrame:RegisterEvent("ADDON_LOADED")
-loadedFrame:SetScript("OnEvent", function(self, event, loadedAddon)
-	if loadedAddon == addonName then
-		local version = GetAddOnMetadata(addonName, "Version") or "unknown"
-		print("\124cff00FF00SimpleTradeSkillExporter v" .. version .. "\124r loaded. Type \124cff00FF00/tsexport help\124r for usage.")
-		self:UnregisterEvent("ADDON_LOADED")
-	end
-end)
-
-SLASH_SIMPLETRADESKILLEXPORTER1 = "/tsexport"
-SlashCmdList["SIMPLETRADESKILLEXPORTER"] = function(msg)
-	if msg == "help" then
-		printHelp()
-		return
-	end
-
-	local skillName, skillRank, _ = GetTradeSkillLine()
+-- Builds and opens the export window for the given format and scope.
+local function runExport(exportType, exportAll)
+	local skillName, skillRank = GetTradeSkillLine()
 	if skillRank == 0 then
 		print("\124cffFF0000Error:\124r Must open a tradeskill window. Type /tsexport help for more information.")
 		return
 	end
-
-	local exportType, exportAll = parseCommand(msg)
 
 	if (exportType == "csv" or exportType == "markdown") and not tse.wowheadBase then
 		print("\124cffFF0000Error:\124r CSV and Markdown exports are not supported on this version of WoW.")
 		return
 	end
 
-	local recipeText = ''
+	local recipeText = ""
 	local recipeCount = 0
 	for i = 1, GetNumTradeSkills() do
-		local name, entryType, _, _, _, _ = GetTradeSkillInfo(i)
+		local name, entryType = GetTradeSkillInfo(i)
 		if name and entryType ~= "header" then
 			if exportAll or isCurrentExpansionRecipe(i) then
 				local itemLink = getItemLink(i)
@@ -201,28 +202,165 @@ SlashCmdList["SIMPLETRADESKILLEXPORTER"] = function(msg)
 	openExportWindow(skillName, skillRank, recipeText, recipeCount, exportType)
 end
 
+-- Creates and shows the export options popup.
+createExportOptionsFrame = function()
+	local frame = CreateFrame("Frame", nil, UIParent, "BasicFrameTemplateWithInset")
+	frame:SetSize(230, 155)
+	frame:SetPoint("CENTER")
+	frame:SetMovable(true)
+	frame:EnableMouse(true)
+	frame:SetClampedToScreen(true)
+	frame:SetFrameStrata("DIALOG")
+	frame:RegisterForDrag("LeftButton")
+	frame:SetScript("OnDragStart", frame.StartMoving)
+	frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
+
+	frame.title = frame:CreateFontString(nil, "OVERLAY")
+	frame.title:SetFontObject("GameFontHighlight")
+	frame.title:SetPoint("LEFT", frame.TitleBg, 5, 0)
+	frame.title:SetText("Export Recipes")
+
+	-- Format label
+	local formatLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	formatLabel:SetPoint("TOPLEFT", frame.InsetBg, "TOPLEFT", 10, -12)
+	formatLabel:SetText("Format:")
+
+	-- Format toggle buttons — clicking one selects it and locks it pushed.
+	local formats = {
+		{ label = "Text",     value = "text" },
+		{ label = "CSV",      value = "csv" },
+		{ label = "Markdown", value = "markdown" },
+	}
+
+	frame.formatButtons = {}
+
+	local function updateFormatButtons()
+		for _, btn in ipairs(frame.formatButtons) do
+			btn:SetButtonState(btn.value == selectedExportFormat and "PUSHED" or "NORMAL",
+				btn.value == selectedExportFormat)
+		end
+	end
+
+	for i, fmt in ipairs(formats) do
+		local btn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+		btn:SetSize(65, 22)
+		btn:SetText(fmt.label)
+		btn.value = fmt.value
+
+		if i == 1 then
+			btn:SetPoint("TOPLEFT", formatLabel, "BOTTOMLEFT", -2, -6)
+		else
+			btn:SetPoint("LEFT", frame.formatButtons[i - 1], "RIGHT", 4, 0)
+		end
+
+		if (fmt.value == "csv" or fmt.value == "markdown") and not tse.wowheadBase then
+			btn:Disable()
+		else
+			btn:SetScript("OnClick", function()
+				selectedExportFormat = btn.value
+				updateFormatButtons()
+			end)
+		end
+
+		frame.formatButtons[i] = btn
+	end
+
+	-- "Include all expansions" checkbox — hidden on Vanilla where all recipes are always included.
+	local checkbox = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+	checkbox:SetPoint("TOPLEFT", frame.formatButtons[1], "BOTTOMLEFT", 2, -8)
+	checkbox:SetChecked(selectedExportAll)
+	checkbox.text:SetText("Include all expansions")
+	checkbox:SetScript("OnClick", function()
+		selectedExportAll = checkbox:GetChecked()
+	end)
+	frame.allCheckbox = checkbox
+
+	if not tse.expansionItemIdFloor then
+		checkbox:Hide()
+	end
+
+	-- Export button
+	local exportBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+	exportBtn:SetSize(90, 24)
+	exportBtn:SetText("Export")
+	exportBtn:SetPoint("BOTTOM", frame.InsetBg, "BOTTOM", 0, 8)
+	exportBtn:SetScript("OnClick", function()
+		frame:Hide()
+		runExport(selectedExportFormat, selectedExportAll)
+	end)
+
+	updateFormatButtons()
+	exportOptionsFrame = frame
+end
+
+-- Attaches the TSE button to TradeSkillFrame's title bar. Safe to call multiple times — creates once.
+local function attachTradeSkillButton()
+	if tse.tradeSkillButton then return end
+
+	local button = CreateFrame("Button", nil, TradeSkillFrame, "UIPanelButtonTemplate")
+	button:SetSize(72, 18)
+	button:SetText("TSExport")
+	-- Anchor to the right edge of the portrait so the button sits in the title bar without overlapping it.
+	button:SetPoint("LEFT", TradeSkillFramePortrait, "RIGHT", 9, 12)
+	button:SetScript("OnClick", function()
+		if not exportOptionsFrame then
+			createExportOptionsFrame()
+		end
+		-- Sync checkbox to current session state when re-opening.
+		if exportOptionsFrame.allCheckbox then
+			exportOptionsFrame.allCheckbox:SetChecked(selectedExportAll)
+		end
+		exportOptionsFrame:Show()
+	end)
+
+	tse.tradeSkillButton = button
+end
+
+local eventFrame = CreateFrame("Frame")
+eventFrame:RegisterEvent("ADDON_LOADED")
+eventFrame:RegisterEvent("TRADE_SKILL_SHOW")
+eventFrame:SetScript("OnEvent", function(self, event, arg1)
+	if event == "ADDON_LOADED" and arg1 == addonName then
+		local version = GetAddOnMetadata(addonName, "Version") or "unknown"
+		print("\124cff00FF00SimpleTradeSkillExporter v" ..
+		version .. "\124r loaded. Type \124cff00FF00/tsexport help\124r for usage.")
+		self:UnregisterEvent("ADDON_LOADED")
+	elseif event == "TRADE_SKILL_SHOW" then
+		attachTradeSkillButton()
+	end
+end)
+
+SLASH_SIMPLETRADESKILLEXPORTER1 = "/tsexport"
+SlashCmdList["SIMPLETRADESKILLEXPORTER"] = function(msg)
+	if msg == "help" then
+		printHelp()
+		return
+	end
+
+	local exportType, exportAll = parseCommand(msg)
+	runExport(exportType, exportAll)
+end
+
 openExportWindow = function(skillName, rank, recipeText, recipeCount, exportType)
-	if not SimpleTradeSkillExporterWindow then
+	if not exportWindow then
 		createExportWindow()
 	end
 
 	local player = getPlayerInfo()
 
 	if rank > 0 then
-		SimpleTradeSkillExporterWindow.title:SetText(skillName ..
-			" skill " .. rank .. " - " .. recipeCount .. " recipes - Press CTRL-C to copy.")
+		exportWindow.title:SetText(skillName .. " skill " .. rank .. " - " .. recipeCount .. " recipes")
 	end
 
 	local exportText = buildHeader(player, skillName, rank, recipeCount, exportType) .. recipeText
 
-	SimpleTradeSkillExporterWindow.editBox:SetText(exportText)
-	SimpleTradeSkillExporterWindow.editBox:HighlightText()
-	SimpleTradeSkillExporterWindow:Show()
+	exportWindow.editBox:SetText(exportText)
+	exportWindow.editBox:HighlightText()
+	exportWindow:Show()
 end
 
--- Look to switch to UIPanelDialogTemplate
 createExportWindow = function()
-	local frame = CreateFrame("Frame", "SimpleTradeSkillExporterWindow", UIParent, "BasicFrameTemplateWithInset")
+	local frame = CreateFrame("Frame", nil, UIParent, "BasicFrameTemplateWithInset")
 	frame:SetSize(640, 480)
 	frame:SetPoint("CENTER")
 	frame:SetMovable(true)
@@ -232,16 +370,19 @@ createExportWindow = function()
 	frame:RegisterForDrag("LeftButton")
 	frame:SetScript("OnDragStart", frame.StartMoving)
 	frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
+
 	frame.title = frame:CreateFontString(nil, "OVERLAY")
 	frame.title:SetFontObject("GameFontHighlight")
 	frame.title:SetPoint("LEFT", frame.TitleBg, 5, 0)
-	frame.scrollFrame = CreateFrame("ScrollFrame", "SimpleTradeSkillExporterScrollFrame", SimpleTradeSkillExporterWindow,
-		"UIPanelScrollFrameTemplate")
-	frame.scrollFrame:SetPoint("TOPLEFT", SimpleTradeSkillExporterWindow.InsetBg, "TOPLEFT", 4, -8)
-	frame.scrollFrame:SetPoint("BOTTOMRIGHT", SimpleTradeSkillExporterWindow.InsetBg, "BOTTOMRIGHT", -3, 4)
+
+	-- Scroll frame leaves 30px at the bottom for the button row.
+	frame.scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
+	frame.scrollFrame:SetPoint("TOPLEFT", frame.InsetBg, "TOPLEFT", 4, -8)
+	frame.scrollFrame:SetPoint("BOTTOMRIGHT", frame.InsetBg, "BOTTOMRIGHT", -3, 30)
 	frame.scrollFrame.ScrollBar:SetPoint("TOPLEFT", frame.scrollFrame, "TOPRIGHT", -20, -22)
 	frame.scrollFrame.ScrollBar:SetPoint("BOTTOMRIGHT", frame.scrollFrame, "BOTTOMRIGHT", -15, 22)
-	frame.editBox = CreateFrame("EditBox", "SimpleTradeSkillExporterEditBox", SimpleTradeSkillExporterScrollFrame)
+
+	frame.editBox = CreateFrame("EditBox", nil, frame.scrollFrame)
 	frame.editBox:SetPoint("TOPLEFT", frame.scrollFrame, 5, -5)
 	frame.editBox:SetFontObject(ChatFontNormal)
 	frame.editBox:SetWidth(780)
@@ -250,4 +391,31 @@ createExportWindow = function()
 	frame.editBox:SetMaxLetters(99999)
 	frame.editBox:SetScript("OnEscapePressed", function() frame:Hide() end)
 	frame.scrollFrame:SetScrollChild(frame.editBox)
+
+	local function hideTooltip() GameTooltip:Hide() end
+
+	-- "Select All" button — re-focuses and re-highlights if the user clicked elsewhere.
+	local selectAllBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+	selectAllBtn:SetSize(100, 22)
+	selectAllBtn:SetText("Select All")
+	selectAllBtn:SetPoint("BOTTOMLEFT", frame.InsetBg, "BOTTOMLEFT", 4, 4)
+	selectAllBtn:SetScript("OnClick", function()
+		frame.editBox:SetFocus()
+		frame.editBox:HighlightText()
+	end)
+	selectAllBtn:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_TOP")
+		GameTooltip:SetText("Select all text, then press Ctrl+C to copy.", nil, nil, nil, nil, true)
+		GameTooltip:Show()
+	end)
+	selectAllBtn:SetScript("OnLeave", hideTooltip)
+
+	-- "Close" button
+	local closeBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+	closeBtn:SetSize(80, 22)
+	closeBtn:SetText("Close")
+	closeBtn:SetPoint("BOTTOMRIGHT", frame.InsetBg, "BOTTOMRIGHT", -4, 4)
+	closeBtn:SetScript("OnClick", function() frame:Hide() end)
+
+	exportWindow = frame
 end
