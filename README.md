@@ -1,6 +1,6 @@
 # Overview
 
-Export your learned trade skill recipes and share them as plain text, Markdown, or CSV with Wowhead links. Originally inspired by TradeSkillExporter, created with permission from GrumpyOldLisian.
+Simple Trade Skill Exporter is an addon which allows you to export your learned trade skill recipes. It supports all professions and triggered via the tradeskill window or slash commands. You can export your recipes as plain text, Markdown With Wowhead links, or CSV with Wowhead links. Originally inspired by TradeSkillExporter, created with permission from GrumpyOldLisian.
 
 ## Supported Versions
 
@@ -12,11 +12,13 @@ Export your learned trade skill recipes and share them as plain text, Markdown, 
 
 ## Usage
 
-Open any trade skill window and type `/tsexport`.
+Open any trade skill window, then either click the **TSExport** button in the title bar or use `/tsexport`.
 
-Use CTRL-C to copy the output and paste it wherever you need it.
+The export window opens with format (Text, CSV, Markdown) and scope (current expansion or all) controls built in — switch between them without reopening.
 
-By default, only recipes for the current expansion are exported. Append `all` to include recipes from all expansions.
+Use the **Select All** button or CTRL-A, then CTRL-C to copy the output and paste it wherever you need it.
+
+### Slash Commands
 
 | Command | Output |
 |---------|--------|
