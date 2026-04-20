@@ -40,7 +40,10 @@ local openExportWindow
 local createExportWindow
 
 -- Parses the slash command message into export format and whether to include all expansions.
--- Examples: "csv all" -> ("csv", true), "markdown" -> ("markdown", false), "" -> ("", false)
+local validFormats = { text = true, csv = true, markdown = true }
+
+-- Examples: "csv all" -> ("csv", true), "markdown" -> ("markdown", false), "" -> ("text", false), "foo" -> ("text", false) + warning
+-- Unknown format values are normalised to "text" with a warning printed to chat.
 local function parseCommand(msg)
 	local parts = {}
 	for part in msg:gmatch("%S+") do
@@ -50,7 +53,13 @@ local function parseCommand(msg)
 	local exportAll = parts[#parts] == "all"
 	if exportAll then table.remove(parts, #parts) end
 
-	return parts[1] or "text", exportAll
+	local format = parts[1] or "text"
+	if not validFormats[format] then
+		print("|cffFF0000[TSE]:|r Unknown format '" .. format .. "', defaulting to text.")
+		format = "text"
+	end
+
+	return format, exportAll
 end
 
 -- Returns the numeric ID of the crafted output for a recipe at the given index, or nil.
@@ -374,7 +383,7 @@ createExportWindow = function()
 	closeBtn:SetScript("OnClick", function() frame:Hide() end)
 
 	-- Syncs format button states and checkbox to current session state.
-	-- Selected button is locked pushed with gold text; others are normal with white text.
+	-- Selected button is locked pushed with white text (1,1,1); others are normal with WoW gold (1,0.82,0).
 	frame.updateControls = function()
 		for _, btn in ipairs(frame.formatButtons) do
 			local selected = btn.value == selectedExportFormat
