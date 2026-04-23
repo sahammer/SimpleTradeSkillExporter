@@ -1,0 +1,22 @@
+package-as: SimpleTradeSkillExporter
+enable-toc-creation: yes
+
+move-folders:
+    SimpleTradeSkillExporter/SimpleTradeSkillExporter: SimpleTradeSkillExporter
+
+manual-changelog:
+    filename: SimpleTradeSkillExporter-CHANGELOG.md
+    markup-type: markdown
+
+ignore:
+    - .github
+    - .vscode
+    - .luacheckrc
+    - .luarc.json
+    - .editorconfig
+    - .stylua.toml
+    - .gitignore
+    - README.md
+    - CHANGELOG.md
+    - LICENSE
+    - tests/
