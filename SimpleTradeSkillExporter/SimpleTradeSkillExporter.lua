@@ -227,8 +227,9 @@ eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:RegisterEvent("TRADE_SKILL_SHOW")
 eventFrame:SetScript("OnEvent", function(self, event, arg1)
 	if event == "ADDON_LOADED" and arg1 == addonName then
-		local version = GetAddOnMetadata(addonName, "Version") or "unknown"
-		print("\124cff00FF00SimpleTradeSkillExporter v" .. version .. "\124r loaded. Type \124cff00FF00/tsexport help\124r for usage.")
+		local version = GetAddOnMetadata and GetAddOnMetadata(addonName, "Version")
+		local versionStr = version and " v" .. version or ""
+		print("\124cff00FF00SimpleTradeSkillExporter" .. versionStr .. "\124r loaded. Type \124cff00FF00/tsexport help\124r for usage.")
 		self:UnregisterEvent("ADDON_LOADED")
 	elseif event == "TRADE_SKILL_SHOW" then
 		attachTradeSkillButton()
