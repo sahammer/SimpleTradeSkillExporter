@@ -122,10 +122,7 @@ local function getItemLink(index)
 			return "spell=" .. tonumber(itemId)
 		else
 			print("|cffFF0000[TSE]: Unable to process entry " .. index)
-			local craftedLink = GetTradeSkillItemLink(index)
-			local spellLink   = GetTradeSkillRecipeLink(index)
-			if craftedLink then print(craftedLink:gsub('\124', '\124\124')) end
-			if spellLink   then print(spellLink:gsub('\124', '\124\124'))   end
+			if itemLink then print(itemLink:gsub('\124', '\124\124')) end
 			return nil
 		end
 	end
