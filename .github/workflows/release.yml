@@ -44,11 +44,7 @@ jobs:
       - name: Package and release
         uses: BigWigsMods/packager@v2
         with:
-          args: -m .pkgmeta-trade -n "{package-name}-{project-version}{classic}" -d
-
-      - name: Remove clean version tag
-        if: always()
-        run: git tag -d "${GITHUB_REF_NAME#trade-}" || true
+          args: -m .pkgmeta-trade -n "{package-name}-{project-version}{classic}"
 
   # release-guild:
   #   runs-on: ubuntu-latest
@@ -65,9 +61,6 @@ jobs:
   #       with:
   #         fetch-depth: 0
 
-  #     - name: Copy shared library into addon folder
-  #       run: cp Shared/SimpleWowExportersLib.lua SimpleGuildRosterExporter/SimpleWowExportersLib.lua
-
   #     - name: Create clean version tag
   #       run: |
   #         git tag -d "${GITHUB_REF_NAME}"
@@ -78,6 +71,3 @@ jobs:
   #       with:
   #         args: -m .pkgmeta-guild -n "{package-name}-{project-version}{classic}"
 
-  #     - name: Remove clean version tag
-  #       if: always()
-  #       run: git tag -d "${GITHUB_REF_NAME#guild-}" || true
