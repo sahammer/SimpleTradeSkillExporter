@@ -1,7 +1,9 @@
 # 1.3.1
-Fixes load message on TBC Classic where the version could not be retrieved.
+Fixes load message across all classic flavors and defaults export scope to all expansions.
 
-- Fixed Lua error on TBC Classic caused by missing GetAddOnMetadata API — load message now omits the version on unsupported clients
+- Fixed loading Lua error on TBC Classic caused by missing GetAddOnMetadata API — load message now omits the version on unsupported clients
+- Fixed version not displaying on Anniversary (TBC) by adding support for the retail C_AddOns.GetAddOnMetadata API
+- Export window now defaults to all expansions — append `current` to slash commands to filter to current expansion only
 
 # 1.2.1
 Adds an in-game TSExport button with inline format and expansion controls, and fixes enchanting expansion filtering.

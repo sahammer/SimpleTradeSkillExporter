@@ -14,7 +14,7 @@ Simple Trade Skill Exporter is an addon which allows you to export your learned 
 
 Open any trade skill window, then either click the **TSExport** button in the title bar or use `/tsexport`.
 
-The export window opens with format (Text, CSV, Markdown) and scope (current expansion or all) controls built in — switch between them without reopening.
+The export window opens with format (Text, CSV, Markdown) and scope controls built in — all expansions are shown by default. Uncheck "All expansions" to limit to the current expansion only.
 
 Use the **Select All** button or CTRL-A, then CTRL-C to copy the output and paste it wherever you need it.
 
@@ -22,10 +22,10 @@ Use the **Select All** button or CTRL-A, then CTRL-C to copy the output and past
 
 | Command | Output |
 |---------|--------|
-| `/tsexport` | Plain text — current expansion only |
-| `/tsexport all` | Plain text — all expansions |
-| `/tsexport markdown` | Markdown with Wowhead links — current expansion only |
-| `/tsexport markdown all` | Markdown with Wowhead links — all expansions |
-| `/tsexport csv` | CSV with Wowhead hyperlinks — current expansion only |
-| `/tsexport csv all` | CSV with Wowhead hyperlinks — all expansions |
+| `/tsexport` | Plain text — all expansions |
+| `/tsexport current` | Plain text — current expansion only |
+| `/tsexport markdown` | Markdown with Wowhead links — all expansions |
+| `/tsexport markdown current` | Markdown with Wowhead links — current expansion only |
+| `/tsexport csv` | CSV with Wowhead hyperlinks — all expansions |
+| `/tsexport csv current` | CSV with Wowhead hyperlinks — current expansion only |
 | `/tsexport help` | Show available commands |

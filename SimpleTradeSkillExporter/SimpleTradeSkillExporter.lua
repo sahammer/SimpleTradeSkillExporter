@@ -29,14 +29,15 @@ local exportWindow
 
 local validFormats = { text = true, csv = true, markdown = true }
 
--- Examples: "csv all" -> ("csv", true), "" -> ("text", false), "foo" -> ("text", false) + warning
+-- Examples: "csv" -> ("csv", true), "csv current" -> ("csv", false), "" -> ("text", true)
+-- All expansions is the default. Append "current" to limit to current expansion only.
 -- Unknown format values are normalised to "text" with a warning printed to chat.
 local function parseCommand(msg)
 	local parts = {}
 	for part in msg:gmatch("%S+") do table.insert(parts, part) end
 
-	local exportAll = parts[#parts] == "all"
-	if exportAll then table.remove(parts, #parts) end
+	local exportAll = parts[#parts] ~= "current"
+	if not exportAll then table.remove(parts, #parts) end
 
 	local format = parts[1] or "text"
 	if not validFormats[format] then
@@ -96,14 +97,14 @@ local function buildHeader(player, skillName, rank, recipeCount, exportType)
 end
 
 local function printHelp()
-	print("\124cff00FF00tsexport:\124r \124cff00FF00S\124rimple \124cff00FF00T\124rradeskill \124cff00FF00E\124rxporter - Help")
-	print("\124cff00FF00tsexport:\124r Type '/tsexport help' to show this message")
-	print("\124cff00FF00tsexport:\124r Open a tradeskill window, then type one of the following commands")
-	print("\124cff00FF00tsexport:\124r By default, only recipes for the current expansion are exported")
-	print("\124cff00FF00tsexport:\124r Append '\124cff00FF00all\124r' to include recipes from all expansions")
-	print("\124cff00FF00tsexport:\124r '/tsexport' or '/tsexport all' - plain text list")
-	print("\124cff00FF00tsexport:\124r '/tsexport csv' or '/tsexport csv all' - Comma Separated Value list")
-	print("\124cff00FF00tsexport:\124r '/tsexport markdown' or '/tsexport markdown all' - Markdown list")
+	print("\124cff00FF00TSE:\124r \124cff00FF00S\124rimple \124cff00FF00T\124rradeskill \124cff00FF00E\124rxporter - Help")
+	print("\124cff00FF00TSE:\124r Type '/tsexport help' to show this message")
+	print("\124cff00FF00TSE:\124r Open a tradeskill window, then type one of the following commands")
+	print("\124cff00FF00TSE:\124r By default, all expansions are exported")
+	print("\124cff00FF00TSE:\124r Append '\124cff00FF00current\124r' to limit to current expansion only")
+	print("\124cff00FF00TSE:\124r '/tsexport' or '/tsexport current' - plain text list")
+	print("\124cff00FF00TSE:\124r '/tsexport csv' or '/tsexport csv current' - Comma Separated Value list")
+	print("\124cff00FF00TSE:\124r '/tsexport markdown' or '/tsexport markdown current' - Markdown list")
 end
 
 local function getItemLink(index)
@@ -218,7 +219,7 @@ local function attachTradeSkillButton()
 	button:SetText("TSExport")
 	button:SetPoint("LEFT", TradeSkillFramePortrait, "RIGHT", 9, 12)
 	button:SetScript("OnClick", function()
-		runExport(tse.lastFormat or "text", tse.lastScope or false)
+		runExport(tse.lastFormat or "text", tse.lastScope ~= false)
 	end)
 
 	tse.tradeSkillButton = button

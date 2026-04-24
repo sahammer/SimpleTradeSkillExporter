@@ -123,7 +123,7 @@ end
 -- Returns a frame. Call frame:Open(format, scope) to set state and show.
 function SWE.CreateExportWindow(config)
 	local selectedFormat = config.defaultFormat or "text"
-	local selectedScope  = false
+	local selectedScope  = true
 
 	local frame = CreateFrame("Frame", nil, UIParent, "BasicFrameTemplateWithInset")
 	frame:SetSize(640, 480)
