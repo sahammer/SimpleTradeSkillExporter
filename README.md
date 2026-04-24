@@ -1,8 +1,12 @@
 # Overview
 
+Simple World of Warcraft exporters is a suite of focused addons that make it easy to export your in game data. These tools empower players and guilds to organize their trade skills, rosters and more. Every addon offers multiple export options including Text, CSV and Markdown formatted.
+
+## SimpleTradeSkillExporter
+
 Simple Trade Skill Exporter is an addon which allows you to export your learned trade skill recipes. It supports all professions and triggered via the tradeskill window or slash commands. You can export your recipes as plain text, Markdown With Wowhead links, or CSV with Wowhead links. Originally inspired by TradeSkillExporter, created with permission from GrumpyOldLisian.
 
-## Supported Versions
+### Supported Versions
 
 - Mists of Pandaria Classic
 - Cataclysm Classic
@@ -10,7 +14,7 @@ Simple Trade Skill Exporter is an addon which allows you to export your learned 
 - The Burning Crusade Classic (Anniversary)
 - Classic Era (Vanilla)
 
-## Usage
+### Usage
 
 Open any trade skill window, then either click the **TSExport** button in the title bar or use `/tsexport`.
 
