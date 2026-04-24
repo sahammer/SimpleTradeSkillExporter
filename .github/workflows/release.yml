@@ -42,7 +42,7 @@ jobs:
       - name: Package and release
         uses: BigWigsMods/packager@v2
         with:
-          args: -m .pkgmeta-trade -n "{package-name}-{project-version}{classic} -d"
+          args: -m .pkgmeta-trade -n "{package-name}-{project-version}{classic}" -d
 
   # release-guild:
   #   runs-on: ubuntu-latest
