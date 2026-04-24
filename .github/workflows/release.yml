@@ -37,7 +37,9 @@ jobs:
           fetch-depth: 0
 
       - name: Create clean version tag
-        run: git tag "${GITHUB_REF_NAME#trade-}"
+        run: |
+          git tag -d "${GITHUB_REF_NAME}"
+          git tag "${GITHUB_REF_NAME#trade-}"
 
       - name: Package and release
         uses: BigWigsMods/packager@v2
@@ -46,7 +48,7 @@ jobs:
 
       - name: Remove clean version tag
         if: always()
-        run: git tag -d "${GITHUB_REF_NAME#trade-}"
+        run: git tag -d "${GITHUB_REF_NAME#trade-}" || true
 
   # release-guild:
   #   runs-on: ubuntu-latest
@@ -67,7 +69,9 @@ jobs:
   #       run: cp Shared/SimpleWowExportersLib.lua SimpleGuildRosterExporter/SimpleWowExportersLib.lua
 
   #     - name: Create clean version tag
-  #       run: git tag "${GITHUB_REF_NAME#guild-}"
+  #       run: |
+  #         git tag -d "${GITHUB_REF_NAME}"
+  #         git tag "${GITHUB_REF_NAME#guild-}"
 
   #     - name: Package and release
   #       uses: BigWigsMods/packager@v2
@@ -76,4 +80,4 @@ jobs:
 
   #     - name: Remove clean version tag
   #       if: always()
-  #       run: git tag -d "${GITHUB_REF_NAME#guild-}"
+  #       run: git tag -d "${GITHUB_REF_NAME#guild-}" || true
