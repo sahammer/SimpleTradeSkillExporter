@@ -10,6 +10,8 @@
 ## Version: @project-version@
 ## X-Curse-Project-ID: 1048094
 ## X-Wago-ID: YK9EjOKL
+## IconTexture: Interface\Icons\Trade_Engineering
+## Category: Simple WoW Exporters
 
-SimpleWowExportersLib.lua
+Shared/SimpleWowExportersLib.lua
 SimpleTradeSkillExporter.lua

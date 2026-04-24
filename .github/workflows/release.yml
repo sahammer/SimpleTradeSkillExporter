@@ -36,13 +36,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Copy shared library into addon folder
-        run: cp Shared/SimpleWowExportersLib.lua SimpleTradeSkillExporter/SimpleWowExportersLib.lua
+      - name: Create clean version tag
+        run: git tag "${GITHUB_REF_NAME#trade-}"
 
       - name: Package and release
         uses: BigWigsMods/packager@v2
         with:
           args: -m .pkgmeta-trade -n "{package-name}-{project-version}{classic}" -d
+
+      - name: Remove clean version tag
+        if: always()
+        run: git tag -d "${GITHUB_REF_NAME#trade-}"
 
   # release-guild:
   #   runs-on: ubuntu-latest
@@ -62,7 +66,14 @@ jobs:
   #     - name: Copy shared library into addon folder
   #       run: cp Shared/SimpleWowExportersLib.lua SimpleGuildRosterExporter/SimpleWowExportersLib.lua
 
+  #     - name: Create clean version tag
+  #       run: git tag "${GITHUB_REF_NAME#guild-}"
+
   #     - name: Package and release
   #       uses: BigWigsMods/packager@v2
   #       with:
   #         args: -m .pkgmeta-guild -n "{package-name}-{project-version}{classic}"
+
+  #     - name: Remove clean version tag
+  #       if: always()
+  #       run: git tag -d "${GITHUB_REF_NAME#guild-}"
