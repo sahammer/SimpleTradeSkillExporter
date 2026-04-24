@@ -235,7 +235,8 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
 			self:UnregisterEvent("TRADE_SKILL_SHOW")
 			return
 		end
-		local version = GetAddOnMetadata and GetAddOnMetadata(addonName, "Version")
+		local getMetadata = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+		local version = getMetadata and getMetadata(addonName, "Version")
 		local versionStr = version and " v" .. version or ""
 		print("\124cff00FF00SimpleTradeSkillExporter" .. versionStr .. "\124r loaded. Type \124cff00FF00/tsexport help\124r for usage.")
 		self:UnregisterEvent("ADDON_LOADED")
