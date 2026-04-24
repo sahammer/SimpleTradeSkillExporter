@@ -41,23 +41,22 @@ jobs:
         with:
           args: -m .pkgmeta-trade -n "{package-name}-{project-version}{classic}"
 
-  # release-guild:
-  #   runs-on: ubuntu-latest
-  #   if: always() && needs.lint.result != 'cancelled' && startsWith(github.ref_name, 'guild-')
-  #   needs: lint
-  #   env:
-  #     CF_API_KEY: ${{ secrets.CF_API_KEY }}
-  #     WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
-  #     GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+  release-guild:
+    runs-on: ubuntu-latest
+    if: always() && needs.lint.result != 'cancelled' && startsWith(github.ref_name, 'guild-')
+    needs: lint
+    env:
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
 
-  #   steps:
-  #     - name: Clone project
-  #       uses: actions/checkout@v4.2.2
-  #       with:
-  #         fetch-depth: 0
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
 
-  #     - name: Package and release
-  #       uses: BigWigsMods/packager@v2
-  #       with:
-  #         args: -m .pkgmeta-guild -n "{package-name}-{project-version}{classic}"
-
+      - name: Package and release
+        uses: BigWigsMods/packager@v2
+        with:
+          args: -m .pkgmeta-guild -n "{package-name}-{project-version}{classic}"
