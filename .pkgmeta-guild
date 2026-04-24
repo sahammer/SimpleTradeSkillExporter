@@ -1,0 +1,22 @@
+package-as: SimpleGuildRosterExporter
+enable-toc-creation: yes
+
+move-folders:
+    SimpleGuildRosterExporter/SimpleGuildRosterExporter: SimpleGuildRosterExporter
+
+manual-changelog:
+    filename: SimpleGuildRosterExporter-CHANGELOG.md
+    markup-type: markdown
+
+ignore:
+    - .github
+    - .vscode
+    - .luacheckrc
+    - .luarc.json
+    - .editorconfig
+    - .stylua.toml
+    - .gitignore
+    - README.md
+    - CHANGELOG.md
+    - LICENSE
+    - tests/

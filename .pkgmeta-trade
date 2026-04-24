@@ -5,7 +5,7 @@ move-folders:
     SimpleTradeSkillExporter/SimpleTradeSkillExporter: SimpleTradeSkillExporter
 
 manual-changelog:
-    filename: CHANGELOG.md
+    filename: SimpleTradeSkillExporter-CHANGELOG.md
     markup-type: markdown
 
 ignore:

@@ -11,4 +11,5 @@
 ## X-Curse-Project-ID: 1048094
 ## X-Wago-ID: YK9EjOKL
 
+SimpleWowExportersLib.lua
 SimpleTradeSkillExporter.lua
