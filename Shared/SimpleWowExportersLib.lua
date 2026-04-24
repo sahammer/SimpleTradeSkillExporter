@@ -50,7 +50,9 @@ function SWE.RenderRow(format, values)
 			local label = type(v) == "table" and v.label or v
 			local url   = type(v) == "table" and v.url   or nil
 			if url then
-				table.insert(parts, '=HYPERLINK("' .. url .. '","' .. label .. '")')
+				local escapedUrl   = url:gsub('"', '""')
+				local escapedLabel = tostring(label):gsub('"', '""')
+				table.insert(parts, '"=HYPERLINK(""' .. escapedUrl .. '"",""' .. escapedLabel .. '"")"')
 			else
 				table.insert(parts, '"' .. tostring(label):gsub('"', '""') .. '"')
 			end

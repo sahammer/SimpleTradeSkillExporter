@@ -159,6 +159,8 @@ end
 -- onRefresh callback passed to SWE.CreateExportWindow.
 -- Builds the full export text from tse.recipeData for the given format and scope.
 local function buildExportText(format, scope)
+	tse.lastFormat = format
+	tse.lastScope  = scope
 	if not tse.recipeData then return "", "" end
 	local data = tse.recipeData
 
@@ -227,6 +229,12 @@ eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:RegisterEvent("TRADE_SKILL_SHOW")
 eventFrame:SetScript("OnEvent", function(self, event, arg1)
 	if event == "ADDON_LOADED" and arg1 == addonName then
+		if not tse.SWE then
+			print("\124cffFF0000[TSE] Error:\124r SimpleWowExportersLib failed to load. Ensure SimpleWowExportersLib.lua is in the addon folder.")
+			self:UnregisterEvent("ADDON_LOADED")
+			self:UnregisterEvent("TRADE_SKILL_SHOW")
+			return
+		end
 		local version = GetAddOnMetadata and GetAddOnMetadata(addonName, "Version")
 		local versionStr = version and " v" .. version or ""
 		print("\124cff00FF00SimpleTradeSkillExporter" .. versionStr .. "\124r loaded. Type \124cff00FF00/tsexport help\124r for usage.")
