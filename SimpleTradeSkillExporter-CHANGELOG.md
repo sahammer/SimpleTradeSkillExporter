@@ -1,6 +1,8 @@
 # 1.3.1
 Fixes load message across all classic flavors and defaults export scope to all expansions.
 
+**NOTE:** Default behavior has changed. When running TSExport it will now show all availalbe recipes. You must click to filter it to current, or use `/tsexport current` to filter. README has been updated.
+
 - Fixed loading Lua error on TBC Classic caused by missing GetAddOnMetadata API — load message now omits the version on unsupported clients
 - Fixed version not displaying on Anniversary (TBC) by adding support for the retail C_AddOns.GetAddOnMetadata API
 - Export window now defaults to all expansions — append `current` to slash commands to filter to current expansion only

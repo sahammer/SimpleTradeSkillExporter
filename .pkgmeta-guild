@@ -17,6 +17,6 @@ ignore:
     - .stylua.toml
     - .gitignore
     - README.md
-    - CHANGELOG.md
+    - CHANGELOG*.md
     - LICENSE
     - tests/
