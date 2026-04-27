@@ -9,7 +9,7 @@
 ## Notes: A simple guild roster exporter
 ## Version: @project-version@
 ## X-Curse-Project-ID: 1523985
-## X-Wago-ID: 
+## X-Wago-ID: QN53poKB
 ## IconTexture: Interface\Icons\INV_Letter_15
 ## Category: Simple WoW Exporters
 

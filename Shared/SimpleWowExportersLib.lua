@@ -2,7 +2,7 @@
 -- Author: Hamma
 -- Shared export window UI and row/header renderer for Simple*Exporter addons.
 -- Loaded by each addon's TOC before the addon's own Lua file.
--- Attached to the addon namespace (ns.SWE) — no globals written.
+-- Attached to the addon namespace (ns.SWE) — also writes _G.SWERegistry for cross-addon coordination.
 --
 -- Public API:
 --
@@ -11,7 +11,7 @@
 --     format: "text" | "csv" | "markdown" | "md-table"
 --     values: array of strings or {label=string, url=string} tables.
 --     Values with a url are rendered as hyperlinks where the format supports it.
---     Text joins values with tabs. CSV quotes values. Markdown renders values[1]
+--     Text joins values with two spaces. CSV quotes values. Markdown renders values[1]
 --     as a list item. md-table renders all values as a pipe-separated row.
 --
 --   SWE.RenderHeader(format, columns) -> string
@@ -25,9 +25,10 @@
 --     The window has format toggle buttons, an optional scope checkbox,
 --     a scrollable edit box, and Select All / Close buttons.
 --     config: {
---       buttons       = { {label, value, disabled}, ... },
+--       buttons       = { {label, value, width, disabled}, ... },  -- width in pixels (default 72)
 --       defaultFormat = string,
 --       hasScope      = bool,
+--       scopeLabel    = string,           -- checkbox label (default "All expansions")
 --       onRefresh     = function(format, scope) -> text, title
 --     }
 --     Call frame:Open(format, scope) to set state and show the window.
