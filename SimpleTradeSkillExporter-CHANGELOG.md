@@ -1,3 +1,9 @@
+# 1.3.2
+Adds combined suite load message and /swexport help command shared across all Simple WoW Exporters addons.
+
+- Load message now shows all installed Simple WoW Exporters addons on a single line
+- Added /swexport help to list available commands across all loaded addons
+
 # 1.3.1
 Fixes load message across all classic flavors and defaults export scope to all expansions.
 

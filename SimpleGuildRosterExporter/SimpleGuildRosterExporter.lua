@@ -1,7 +1,7 @@
 -- SimpleGuildRosterExporter
 -- Author: Hamma
 -- Description: Exports guild roster data to plain text, CSV, Markdown list, or Markdown table format.
---              Supports all classic WoW flavors (Vanilla, TBC, Wrath, Cata, MoP).
+--              Supports all classic WoW flavors (Vanilla, TBC, Wrath, Cata, MoP) and Retail.
 --              Use /grexport or the GRExport button on the guild frame.
 
 local addonName, gre = ...
@@ -11,7 +11,12 @@ local exportWindow
 local pendingFormat = nil
 
 -- GuildRoster() is the classic API; C_GuildInfo.GuildRoster() is the retail-based client API (e.g. Anniversary)
-local requestRoster = (C_GuildInfo and C_GuildInfo.GuildRoster) or GuildRoster
+local requestRoster  = (C_GuildInfo and C_GuildInfo.GuildRoster) or GuildRoster
+-- GetAddOnMetadata lives under C_AddOns on retail-based clients (Anniversary, MoP)
+local getAddonMetadata = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+-- Interface version ranges: Classic 10000-19999, TBC 20000-29999, Wrath 30000-39999,
+-- Cata 40000-49999, MoP 50000-59999, Retail 100000+
+local buildVersion = select(4, GetBuildInfo())
 
 local validFormats = { text = true, csv = true, ["markdown-list"] = true, ["markdown-table"] = true }
 
@@ -41,9 +46,38 @@ local function parseCommand(msg)
 	return format
 end
 
--- Returns "Online" for online members, "Offline" for offline members.
-local function formatLastOnline(isOnline)
-	return isOnline and "Online" or "Offline"
+-- Returns "Online" for online members, or a human-readable offline duration.
+-- Shows two levels of granularity (e.g. "2mo 5d", "3d 14h") suppressing
+-- smaller units when larger ones are present.
+local function formatLastOnline(isOnline, index)
+	if isOnline then return "Online" end
+	if GetGuildRosterLastOnline then
+		local years, months, days, hours = GetGuildRosterLastOnline(index)
+		if years  > 0 then
+			return months > 0 and years .. "y " .. months .. "mo ago" or years .. "y ago"
+		end
+		if months > 0 then
+			return days > 0 and months .. "mo " .. days .. "d ago" or months .. "mo ago"
+		end
+		if days   > 0 then
+			return hours > 0 and days .. "d " .. hours .. "h ago" or days .. "d ago"
+		end
+		if hours  > 0 then return hours .. "h ago" end
+		return "< 1h ago"
+	end
+	return "Offline"
+end
+
+-- Strips duplicate realm suffixes from names (Blizzard bug: "Player-Realm-Realm")
+local function cleanName(name)
+	local player, realm = name:match("^(.+)-(.+)$")
+	if player and realm then
+		local innerRealm = player:match("^.+-(.+)$")
+		if innerRealm == realm then
+			return player
+		end
+	end
+	return name
 end
 
 local function captureRosterData()
@@ -54,16 +88,19 @@ local function captureRosterData()
 	local members = {}
 	for i = 1, totalMembers do
 		local name, rankName, _, level, classDisplayName, _, _, _, isOnline = GetGuildRosterInfo(i)
-		if name then
+		if name and name ~= "" then
 			table.insert(members, {
-				name       = name,
-				class      = classDisplayName,
-				level      = level,
-				rank       = rankName,
-				lastOnline = formatLastOnline(isOnline),
+				name       = cleanName(name),
+				class      = classDisplayName or "Unknown",
+				level      = level or 0,
+				rank       = rankName or "",
+				lastOnline = formatLastOnline(isOnline, i),
+				isOnline   = isOnline and true or false,
 			})
 		end
 	end
+
+	table.sort(members, function(a, b) return a.name < b.name end)
 
 	gre.rosterData = {
 		guildName = guildName,
@@ -75,13 +112,15 @@ local function captureRosterData()
 end
 
 local function buildHeader(data, memberCount, format)
-	if format == "csv" or format == "markdown-table" then
+	if format == "csv" then
 		return ""
-	elseif format == "markdown-list" then
-		return "**Guild:** " .. data.guildName .. " — " .. data.server .. "  \n" ..
+	elseif format == "markdown-table" or format == "markdown-list" then
+		return "**Guild:** " .. data.guildName .. "  \n" ..
+		       "**Server:** " .. data.server .. "  \n" ..
 		       "**Members:** " .. memberCount .. "  \n\n"
 	else
-		return "Guild: " .. data.guildName .. " — " .. data.server .. "  \n" ..
+		return "Guild: " .. data.guildName .. "  \n" ..
+		       "Server: " .. data.server .. "  \n" ..
 		       "Members: " .. memberCount .. "  \n" ..
 		       "---------------------\n"
 	end
@@ -96,71 +135,156 @@ local function printHelp()
 	print("\124cff00FF00GRE:\124r '/grexport markdown table' - Markdown table (all fields)")
 end
 
-local columns = { "Name", "Class", "Level", "Rank", "Last Online" }
+local columns = { "Name", "Level", "Class", "Rank", "Last Online" }
+
+local function formatMemberRow(format, rendererFormat, member)
+	if format == "markdown-list" then
+		local entry = member.name .. ", Level " .. member.level .. " " .. member.class
+		return SWE.RenderRow(rendererFormat, { entry })
+	elseif format == "text" then
+		local entry = member.name .. " | " .. member.level .. " " .. member.class .. " | " .. member.rank .. " | " .. member.lastOnline
+		return SWE.RenderRow(rendererFormat, { entry })
+	else
+		return SWE.RenderRow(rendererFormat, {
+			member.name,
+			tostring(member.level),
+			member.class,
+			member.rank,
+			member.lastOnline,
+		})
+	end
+end
+
+local function memberCount(lines, format)
+	local hasHeaderRow = format == "csv" or format == "markdown-table"
+	return hasHeaderRow and (#lines - 1) or #lines
+end
 
 -- onRefresh callback passed to SWE.CreateExportWindow.
 -- Builds the full export text from gre.rosterData for the given format.
-local function buildExportText(format, _scope)
+local function buildExportText(format, includeOffline)
 	gre.lastFormat = format
 	if not gre.rosterData then return "", "" end
 	local data = gre.rosterData
-	local lf   = libFormat(format)
+	local rendererFormat = libFormat(format)
 
 	local lines = {}
 
 	if format == "csv" or format == "markdown-table" then
-		lines[#lines + 1] = SWE.RenderHeader(lf, columns)
+		lines[#lines + 1] = SWE.RenderHeader(rendererFormat, columns)
 	end
 
 	for _, member in ipairs(data.members) do
-		if format == "markdown-list" then
-			local entry = member.name .. ", Level " .. member.level .. " " .. member.class
-			lines[#lines + 1] = SWE.RenderRow(lf, { entry })
-		else
-			lines[#lines + 1] = SWE.RenderRow(lf, {
-				member.name,
-				member.class,
-				tostring(member.level),
-				member.rank,
-				member.lastOnline,
-			})
+		if includeOffline or member.isOnline then
+			lines[#lines + 1] = formatMemberRow(format, rendererFormat, member)
 		end
 	end
 
-	local count  = #data.members
+	local count  = memberCount(lines, format)
 	local header = buildHeader(data, count, format)
 	local title  = data.guildName .. " — " .. count .. " members"
 	return header .. table.concat(lines), title
 end
 
 local function runExport(exportType)
+	if not GetGuildInfo("player") then
+		print("\124cffFF0000Error:\124r You are not in a guild.")
+		return
+	end
+
 	if not exportWindow then
 		exportWindow = SWE.CreateExportWindow({
 			buttons = {
-				{ label = "Text",     value = "text" },
-				{ label = "CSV",      value = "csv" },
-				{ label = "MD List",  value = "markdown-list" },
-				{ label = "MD Table", value = "markdown-table" },
+				{ label = "Text",           value = "text",           width = 60  },
+				{ label = "CSV",            value = "csv",            width = 60  },
+				{ label = "Markdown List",  value = "markdown-list",  width = 115 },
+				{ label = "Markdown Table", value = "markdown-table", width = 115 },
 			},
 			defaultFormat = "text",
-			hasScope      = false,
+			hasScope      = true,
+			scopeLabel    = "Include offline",
 			onRefresh     = buildExportText,
 		})
 	end
 
 	gre.lastFormat = exportType
-	pendingFormat  = exportType
-	requestRoster()
+
+	-- Try to capture immediately in case data is already cached.
+	-- If data unavailable, fall back to async request.
+	if captureRosterData() then
+		exportWindow:Open(exportType, true)
+	elseif requestRoster then
+		pendingFormat = exportType
+		requestRoster()
+	else
+		print("\124cffFF0000Error:\124r Unable to request guild roster on this client.")
+	end
 end
 
 local function attachGuildButton()
 	if gre.guildButton then return end
-	if not GuildFrame or not GuildFramePortrait then return end
 
-	local button = CreateFrame("Button", nil, GuildFrame, "UIPanelButtonTemplate")
-	button:SetSize(72, 18)
-	button:SetText("GRExport")
-	button:SetPoint("LEFT", GuildFramePortrait, "RIGHT", 9, 12)
+	local frame, applyButtonPosition
+	local isMopOrRetail = (buildVersion >= 50000 and buildVersion < 60000) or buildVersion >= 100000
+	if isMopOrRetail and CommunitiesFrame and CommunitiesFrame.GuildInfoTab then
+		-- MoP Classic (50xxx) and Retail (100xxx+): icon tab on right side below GRM's tab or Blizzard's GuildInfoTab
+		frame = CommunitiesFrame
+		applyButtonPosition = function(btn)
+			btn:SetPoint("TOP", CommunitiesFrame.GuildInfoTab, "BOTTOM", 0, -64)
+		end
+	elseif CommunitiesFrame and CommunitiesFrame.portrait and CommunitiesFrame:IsShown() then
+		-- Fallback: CommunitiesFrame with portrait but no GuildInfoTab (future-proofing)
+		frame = CommunitiesFrame
+		applyButtonPosition = function(btn) btn:SetPoint("LEFT", CommunitiesFrame.portrait, "RIGHT", 9, 12) end
+	elseif GuildFrame and GuildFrame:IsShown() then
+		if GuildFramePortrait then
+			-- Wrath/Cata/Vanilla: classic guild frame with portrait
+			frame = GuildFrame
+			applyButtonPosition = function(btn) btn:SetPoint("LEFT", GuildFramePortrait, "RIGHT", 9, 12) end
+		else
+			-- TBC-style guild frame: no portrait, position next to "Show Offline Members"
+			frame = GuildFrame
+			applyButtonPosition = function(btn) btn:SetPoint("TOPLEFT", GuildFrame, "TOPLEFT", 50, -27) end
+		end
+	else
+		-- Frame not shown yet — hook for when it opens
+		local function hookOnShow(targetFrame, flagKey)
+			if targetFrame and not gre[flagKey] then
+				gre[flagKey] = true
+				targetFrame:HookScript("OnShow", attachGuildButton)
+			end
+		end
+		hookOnShow(CommunitiesFrame, "communityHooked")
+		hookOnShow(GuildFrame, "guildFrameHooked")
+		return
+	end
+
+	local isCommunitiesTabLayout = isMopOrRetail and CommunitiesFrame and CommunitiesFrame.GuildInfoTab
+
+	local button = CreateFrame("Button", nil, frame, isCommunitiesTabLayout and "UIPanelButtonGrayTemplate" or "UIPanelButtonTemplate")
+	if isCommunitiesTabLayout then
+		button:SetSize(44, 44)
+		local icon = button:CreateTexture(nil, "OVERLAY")
+		-- MoP Classic is 50xxx; Retail is 100xxx+ — adjusts icon size and centering offset to match each client's tab style
+		local isMopClassic = buildVersion < 100000
+		local iconSize  = isMopClassic and 36 or 33
+		local offsetX   = isMopClassic and 0 or 2.5
+		local offsetY   = isMopClassic and 0 or -1.5
+		icon:SetPoint("CENTER", button, "CENTER", offsetX, offsetY)
+		icon:SetSize(iconSize, iconSize)
+		icon:SetTexture("Interface\\Icons\\inv_misc_note_05")
+		button:SetScript("OnEnter", function(self)
+			GameTooltip:SetOwner(self, "ANCHOR_CURSOR")
+			GameTooltip:AddLine("SimpleGuildRosterExporter")
+			GameTooltip:AddLine("/grexport to export", 1, 1, 1)
+			GameTooltip:Show()
+		end)
+		button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	else
+		button:SetSize(72, 18)
+		button:SetText("GRExport")
+	end
+	applyButtonPosition(button)
 	button:SetScript("OnClick", function()
 		runExport(gre.lastFormat or "text")
 	end)
@@ -171,6 +295,7 @@ end
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:RegisterEvent("GUILD_ROSTER_UPDATE")
+eventFrame:RegisterEvent("PLAYER_GUILD_UPDATE")
 eventFrame:SetScript("OnEvent", function(self, event, arg1)
 	if event == "ADDON_LOADED" and arg1 == addonName then
 		if not gre.SWE then
@@ -179,17 +304,17 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
 			self:UnregisterEvent("GUILD_ROSTER_UPDATE")
 			return
 		end
-		local getMetadata = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-		local version     = getMetadata and getMetadata(addonName, "Version")
-		local versionStr  = version and " v" .. version or ""
-		print("\124cff00FF00SimpleGuildRosterExporter" .. versionStr .. "\124r loaded. Type \124cff00FF00/grexport help\124r for usage.")
+		local version = getAddonMetadata and getAddonMetadata(addonName, "Version")
+		SWE.RegisterAddon("SimpleGuildRosterExporter", version, "/grexport help")
 		self:UnregisterEvent("ADDON_LOADED")
-	elseif event == "GUILD_ROSTER_UPDATE" then
+	elseif event == "GUILD_ROSTER_UPDATE" or event == "PLAYER_GUILD_UPDATE" then
 		attachGuildButton()
 		if pendingFormat then
-			captureRosterData()
-			if exportWindow and gre.rosterData then
-				exportWindow:Open(pendingFormat, false)
+			local captured = captureRosterData()
+			if captured and exportWindow and gre.rosterData then
+				exportWindow:Open(pendingFormat, true)
+			elseif not captured then
+				print("\124cffFF0000Error:\124r Unable to capture guild roster data.")
 			end
 			pendingFormat = nil
 		end

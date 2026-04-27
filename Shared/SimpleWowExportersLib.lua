@@ -31,10 +31,47 @@
 --       onRefresh     = function(format, scope) -> text, title
 --     }
 --     Call frame:Open(format, scope) to set state and show the window.
+--
+--   SWE.RegisterAddon(name, version, helpCommand)
+--     Registers an addon with the suite. Prints a combined load message listing
+--     all loaded addons after a short delay, and registers /swexport help to
+--     show help hints for all loaded addons.
 
 local _, ns = ...
 ns.SWE = {}
 local SWE = ns.SWE
+
+-- Shared registry across all addon instances — uses a global so both lib copies can coordinate.
+_G.SWERegistry = _G.SWERegistry or { addons = {}, slashRegistered = false, loadTimer = nil }
+
+-- SWE.RegisterAddon(name, version, helpCommand)
+-- Call from each addon's ADDON_LOADED handler instead of printing a load message directly.
+function SWE.RegisterAddon(name, version, helpCommand)
+	table.insert(_G.SWERegistry.addons, { name = name, version = version, helpCommand = helpCommand })
+
+	if not _G.SWERegistry.slashRegistered then
+		_G.SWERegistry.slashRegistered = true
+		SLASH_SIMPLEWOWEXPORTERS1 = "/swexport"
+		SlashCmdList["SIMPLEWOWEXPORTERS"] = function(msg)
+			print("\124cff00FF00SimpleWowExporters - Help\124r")
+			for _, addon in ipairs(_G.SWERegistry.addons) do
+				print("\124cff00FF00" .. addon.name .. ":\124r Type '" .. addon.helpCommand .. "' for commands.")
+			end
+		end
+	end
+
+	if _G.SWERegistry.loadTimer then
+		_G.SWERegistry.loadTimer:Cancel()
+	end
+	_G.SWERegistry.loadTimer = C_Timer.NewTimer(0.5, function()
+		local names = {}
+		for _, addon in ipairs(_G.SWERegistry.addons) do
+			table.insert(names, addon.name .. (addon.version and " \124cff00FF00v" .. addon.version .. "\124r" or ""))
+		end
+		print("\124cff00FF00SimpleWowExporters\124r loaded: " .. table.concat(names, ", ") .. ". Type \124cff00FF00/swexport help\124r for commands.")
+		_G.SWERegistry.loadTimer = nil
+	end)
+end
 
 -- SWE.RenderRow(format, values) -> string
 -- format: "text" | "csv" | "markdown" | "md-table"
@@ -84,7 +121,7 @@ function SWE.RenderRow(format, values)
 		for _, v in ipairs(values) do
 			table.insert(parts, type(v) == "table" and v.label or tostring(v))
 		end
-		return table.concat(parts, "\t") .. "\n"
+		return table.concat(parts, "  ") .. "\n"
 	end
 end
 
@@ -165,7 +202,7 @@ function SWE.CreateExportWindow(config)
 	frame.formatButtons = {}
 	for i, btnCfg in ipairs(config.buttons) do
 		local btn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-		btn:SetSize(72, 22)
+		btn:SetSize(btnCfg.width or 72, 22)
 		btn:SetText(btnCfg.label)
 		btn.value = btnCfg.value
 
@@ -193,7 +230,7 @@ function SWE.CreateExportWindow(config)
 		local cb = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
 		cb:SetPoint("LEFT", frame.formatButtons[#frame.formatButtons], "RIGHT", 10, 0)
 		cb:SetChecked(false)
-		cb.text:SetText("All expansions")
+		cb.text:SetText(config.scopeLabel or "All expansions")
 		cb:SetScript("OnClick", function()
 			selectedScope = cb:GetChecked()
 			frame.refresh()

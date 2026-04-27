@@ -8,7 +8,9 @@
 ## Author: Hamma
 ## Notes: A simple guild roster exporter
 ## Version: @project-version@
-## IconTexture: Interface\Icons\Achievement_GuildPerk_HaveGroupWillTravel
+## X-Curse-Project-ID: 1523985
+## X-Wago-ID: 
+## IconTexture: Interface\Icons\INV_Letter_15
 ## Category: Simple WoW Exporters
 
 Shared/SimpleWowExportersLib.lua
