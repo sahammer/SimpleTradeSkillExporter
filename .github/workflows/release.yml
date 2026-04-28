@@ -3,8 +3,8 @@ name: Package and Release
 on:
   push:
     tags:
-      - "trade-v*"
-      - "guild-v*"
+      - "tse-v*"
+      - "gre-v*"
       - "!**-alpha**"
       - "!**-beta**"
 
@@ -23,7 +23,7 @@ jobs:
 
   release-trade:
     runs-on: ubuntu-latest
-    if: always() && needs.lint.result != 'cancelled' && startsWith(github.ref_name, 'trade-')
+    if: always() && needs.lint.result != 'cancelled' && startsWith(github.ref_name, 'tse-')
     needs: lint
     env:
       CF_API_KEY: ${{ secrets.CF_API_KEY }}
@@ -43,7 +43,7 @@ jobs:
 
   release-guild:
     runs-on: ubuntu-latest
-    if: always() && needs.lint.result != 'cancelled' && startsWith(github.ref_name, 'guild-')
+    if: always() && needs.lint.result != 'cancelled' && startsWith(github.ref_name, 'gre-')
     needs: lint
     env:
       CF_API_KEY: ${{ secrets.CF_API_KEY }}
