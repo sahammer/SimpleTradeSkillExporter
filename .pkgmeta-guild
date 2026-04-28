@@ -9,6 +9,8 @@ manual-changelog:
     markup-type: markdown
 
 ignore:
+    - SimpleTradeSkillExporter
+    - tools
     - .github
     - .vscode
     - .luacheckrc

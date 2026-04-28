@@ -3,8 +3,8 @@ name: Package and Release
 on:
   push:
     tags:
-      - "trade-v*"
-      - "guild-v*"
+      - "tse-v*"
+      - "gre-v*"
       - "!**-alpha**"
       - "!**-beta**"
 
@@ -23,7 +23,7 @@ jobs:
 
   release-trade:
     runs-on: ubuntu-latest
-    if: always() && needs.lint.result != 'cancelled' && startsWith(github.ref_name, 'trade-')
+    if: always() && needs.lint.result != 'cancelled' && startsWith(github.ref_name, 'tse-')
     needs: lint
     env:
       CF_API_KEY: ${{ secrets.CF_API_KEY }}
@@ -36,38 +36,27 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Create clean version tag
-        run: |
-          git tag -d "${GITHUB_REF_NAME}"
-          git tag "${GITHUB_REF_NAME#trade-}"
-
       - name: Package and release
         uses: BigWigsMods/packager@v2
         with:
           args: -m .pkgmeta-trade -n "{package-name}-{project-version}{classic}"
 
-  # release-guild:
-  #   runs-on: ubuntu-latest
-  #   if: always() && needs.lint.result != 'cancelled' && startsWith(github.ref_name, 'guild-')
-  #   needs: lint
-  #   env:
-  #     CF_API_KEY: ${{ secrets.CF_API_KEY }}
-  #     WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
-  #     GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+  release-guild:
+    runs-on: ubuntu-latest
+    if: always() && needs.lint.result != 'cancelled' && startsWith(github.ref_name, 'gre-')
+    needs: lint
+    env:
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
 
-  #   steps:
-  #     - name: Clone project
-  #       uses: actions/checkout@v4.2.2
-  #       with:
-  #         fetch-depth: 0
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
 
-  #     - name: Create clean version tag
-  #       run: |
-  #         git tag -d "${GITHUB_REF_NAME}"
-  #         git tag "${GITHUB_REF_NAME#guild-}"
-
-  #     - name: Package and release
-  #       uses: BigWigsMods/packager@v2
-  #       with:
-  #         args: -m .pkgmeta-guild -n "{package-name}-{project-version}{classic}"
-
+      - name: Package and release
+        uses: BigWigsMods/packager@v2
+        with:
+          args: -m .pkgmeta-guild -n "{package-name}-{project-version}{classic}"

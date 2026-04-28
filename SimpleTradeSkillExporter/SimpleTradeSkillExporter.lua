@@ -5,7 +5,7 @@
 --              Use /tsexport or the Export button on the tradeskill window.
 
 local addonName, tse = ...
-local SWE = tse.SWE  -- loaded by SimpleWowExportersLib.lua via TOC
+local SWE = tse.SWE -- loaded by SimpleWowExportersLib.lua via TOC
 
 local wowheadUrls = {
 	[WOW_PROJECT_MISTS_CLASSIC]           = "https://wowhead.com/mop-classic/",
@@ -75,9 +75,10 @@ end
 local function buildHeader(player, skillName, rank, recipeCount, exportType)
 	if exportType == "markdown" then
 		local h =
-			"**Player:** " .. player.name .. ", Level " .. player.level .. " " .. player.race .. " " .. player.class .. "  \n" ..
-			"**Guild:** "   .. player.guild  .. "  \n" ..
-			"**Server:** "  .. player.server .. "  \n"
+			"**Player:** " ..
+			player.name .. ", Level " .. player.level .. " " .. player.race .. " " .. player.class .. "  \n" ..
+			"**Guild:** " .. player.guild .. "  \n" ..
+			"**Server:** " .. player.server .. "  \n"
 		if rank > 0 then
 			h = h .. "**" .. skillName .. ":** Skill " .. rank .. ", " .. recipeCount .. " total recipes  \n"
 		end
@@ -86,9 +87,10 @@ local function buildHeader(player, skillName, rank, recipeCount, exportType)
 		return ""
 	else
 		local h =
-			"Player: " .. player.name .. ", Level " .. player.level .. " " .. player.race .. " " .. player.class .. "  \n" ..
-			"Guild: "   .. player.guild  .. "  \n" ..
-			"Server: "  .. player.server .. "  \n"
+			"Player: " ..
+			player.name .. ", Level " .. player.level .. " " .. player.race .. " " .. player.class .. "  \n" ..
+			"Guild: " .. player.guild .. "  \n" ..
+			"Server: " .. player.server .. "  \n"
 		if rank > 0 then
 			h = h .. skillName .. " skill " .. rank .. ", " .. recipeCount .. " total recipes  \n"
 		end
@@ -97,7 +99,8 @@ local function buildHeader(player, skillName, rank, recipeCount, exportType)
 end
 
 local function printHelp()
-	print("\124cff00FF00TSE:\124r \124cff00FF00S\124rimple \124cff00FF00T\124rradeskill \124cff00FF00E\124rxporter - Help")
+	print(
+	"\124cff00FF00TSE:\124r \124cff00FF00S\124rimple \124cff00FF00T\124rradeskill \124cff00FF00E\124rxporter - Help")
 	print("\124cff00FF00TSE:\124r Type '/tsexport help' to show this message")
 	print("\124cff00FF00TSE:\124r Open a tradeskill window, then type one of the following commands")
 	print("\124cff00FF00TSE:\124r By default, all expansions are exported")
@@ -195,10 +198,10 @@ local function runExport(exportType, exportAll)
 
 	if not exportWindow then
 		exportWindow = SWE.CreateExportWindow({
-			buttons = {
+			buttons       = {
 				{ label = "Text",     value = "text" },
 				{ label = "CSV",      value = "csv",      disabled = not tse.wowheadBase },
-				{ label = "Markdown", value = "markdown",  disabled = not tse.wowheadBase },
+				{ label = "Markdown", value = "markdown", disabled = not tse.wowheadBase },
 			},
 			defaultFormat = "text",
 			hasScope      = tse.expansionItemIdFloor ~= nil,
@@ -231,15 +234,15 @@ eventFrame:RegisterEvent("TRADE_SKILL_SHOW")
 eventFrame:SetScript("OnEvent", function(self, event, arg1)
 	if event == "ADDON_LOADED" and arg1 == addonName then
 		if not tse.SWE then
-			print("\124cffFF0000[TSE] Error:\124r SimpleWowExportersLib failed to load. Ensure SimpleWowExportersLib.lua is in the addon folder.")
+			print(
+			"\124cffFF0000[TSE] Error:\124r SimpleWowExportersLib failed to load. Ensure SimpleWowExportersLib.lua is in the addon folder.")
 			self:UnregisterEvent("ADDON_LOADED")
 			self:UnregisterEvent("TRADE_SKILL_SHOW")
 			return
 		end
 		local getMetadata = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 		local version = getMetadata and getMetadata(addonName, "Version")
-		local versionStr = version and " v" .. version or ""
-		print("\124cff00FF00SimpleTradeSkillExporter" .. versionStr .. "\124r loaded. Type \124cff00FF00/tsexport help\124r for usage.")
+		SWE.RegisterAddon("SimpleTradeSkillExporter", version, "/tsexport help")
 		self:UnregisterEvent("ADDON_LOADED")
 	elseif event == "TRADE_SKILL_SHOW" then
 		attachTradeSkillButton()

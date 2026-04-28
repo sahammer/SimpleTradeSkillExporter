@@ -6,7 +6,10 @@ ignore = {
 }
 globals = {
     'SLASH_SIMPLETRADESKILLEXPORTER1',
+    'SLASH_SIMPLEGUILDROSTEREXPORTER1',
+    'SLASH_SIMPLEWOWEXPORTERS1',
     'SlashCmdList',
+    '_G',
 }
 read_globals = {
     'ABANDON_PET',
@@ -22324,6 +22327,10 @@ read_globals = {
     'TradeSkillFilter_OnTextChanged',
     'TradeSkillFrame',
     'TradeSkillFramePortrait',
+    'GuildFrame',
+    'GuildFramePortrait',
+    'GuildRoster',
+    'GRM_RosterTab',
     C_AddOns = {
         fields = {
             'DisableAddOn',
