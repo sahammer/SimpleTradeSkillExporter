@@ -67,7 +67,8 @@ function SWE.RegisterAddon(name, version, helpCommand)
 	_G.SWERegistry.loadTimer = C_Timer.NewTimer(0.5, function()
 		local names = {}
 		for _, addon in ipairs(_G.SWERegistry.addons) do
-			table.insert(names, addon.name .. (addon.version and " \124cff00FF00v" .. addon.version .. "\124r" or ""))
+			local ver = addon.version and addon.version:match("v%d+%.%d+%.%d+")
+			table.insert(names, addon.name .. (ver and " \124cff00FF00" .. ver .. "\124r" or ""))
 		end
 		print("\124cff00FF00SimpleWowExporters\124r loaded: " .. table.concat(names, ", ") .. ". Type \124cff00FF00/swexport help\124r for commands.")
 		_G.SWERegistry.loadTimer = nil
@@ -78,7 +79,7 @@ end
 -- format: "text" | "csv" | "markdown" | "md-table"
 -- values: array of strings or {label=string, url=string} tables
 -- For "markdown": only values[1] is used (list format).
--- For "text": values are joined with tab.
+-- For "text": values are joined with two spaces.
 -- For "csv": values are quoted; {label,url} entries become =HYPERLINK(...).
 -- For "md-table": values are pipe-separated; {label,url} entries become [label](url).
 function SWE.RenderRow(format, values)

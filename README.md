@@ -4,7 +4,7 @@ Simple World of Warcraft exporters is a suite of focused addons that make it eas
 
 ## SimpleTradeSkillExporter
 
-Simple Trade Skill Exporter is an addon which allows you to export your learned trade skill recipes. It supports all professions and triggered via the tradeskill window or slash commands. You can export your recipes as plain text, Markdown With Wowhead links, or CSV with Wowhead links. Originally inspired by TradeSkillExporter, created with permission from GrumpyOldLisian. Part of the *SimpleWowExporter* collection of addons.
+Simple Trade Skill Exporter is an addon which allows you to export your learned trade skill recipes. It supports all professions and triggered via the tradeskill window or slash commands. You can export your recipes as plain text, Markdown With Wowhead links, or CSV with Wowhead links. Originally inspired by TradeSkillExporter, created with permission from GrumpyOldLisian. Part of the *SimpleWowExporters* collection of addons.
 
 ### Supported Versions
 
@@ -38,7 +38,7 @@ Use the **Select All** button or CTRL-A, then CTRL-C to copy the output and past
 
 ## SimpleGuildRosterExporter
 
-Simple Guild Roster Exporter allows you to export your guild roster to plain text, CSV, Markdown list, or Markdown table format. Part of the *SimpleWowExporter* collection of addons.
+Simple Guild Roster Exporter allows you to export your guild roster to plain text, CSV, Markdown list, or Markdown table format. Part of the *SimpleWowExporters* collection of addons.
 
 ### Supported Versions
 

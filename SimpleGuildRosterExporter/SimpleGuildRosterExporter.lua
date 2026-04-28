@@ -300,8 +300,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
 	if event == "ADDON_LOADED" and arg1 == addonName then
 		if not gre.SWE then
 			print("\124cffFF0000[GRE] Error:\124r SimpleWowExportersLib failed to load. Ensure SimpleWowExportersLib.lua is in the addon folder.")
-			self:UnregisterEvent("ADDON_LOADED")
-			self:UnregisterEvent("GUILD_ROSTER_UPDATE")
+			self:UnregisterAllEvents()
 			return
 		end
 		local version = getAddonMetadata and getAddonMetadata(addonName, "Version")

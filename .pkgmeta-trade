@@ -9,6 +9,8 @@ manual-changelog:
     markup-type: markdown
 
 ignore:
+    - SimpleGuildRosterExporter
+    - tools
     - .github
     - .vscode
     - .luacheckrc
