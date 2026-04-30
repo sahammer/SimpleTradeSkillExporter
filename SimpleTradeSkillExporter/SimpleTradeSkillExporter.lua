@@ -1,7 +1,7 @@
 -- SimpleTradeSkillExporter
 -- Author: Hamma
--- Description: Exports trade skill recipes to plain text, CSV, or Markdown format.
---              Supports all classic WoW flavors (Vanilla, TBC, Wrath, Cata, MoP).
+-- Description: Exports trade skill recipes to plain text, CSV, Markdown list, or Markdown table.
+--              Supports Retail (The War Within) and all classic WoW flavors (Vanilla, TBC, Wrath, Cata, MoP).
 --              Use /tsexport or the Export button on the tradeskill window.
 
 local addonName, tse        = ...
