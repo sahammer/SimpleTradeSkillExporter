@@ -8,15 +8,14 @@ local addonName, gre = ...
 local SWE = gre.SWE  -- loaded by SimpleWowExportersLib.lua via TOC
 
 local exportWindow
+-- Holds the requested export format across an async GuildRoster() request.
+-- Set in runExport when roster data is unavailable; cleared after GUILD_ROSTER_UPDATE fires.
 local pendingFormat = nil
 
 -- GuildRoster() is the classic API; C_GuildInfo.GuildRoster() is the retail-based client API (e.g. Anniversary)
 local requestRoster  = (C_GuildInfo and C_GuildInfo.GuildRoster) or GuildRoster
 -- GetAddOnMetadata lives under C_AddOns on retail-based clients (Anniversary, MoP)
 local getAddonMetadata = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
--- Interface version ranges: Classic 10000-19999, TBC 20000-29999, Wrath 30000-39999,
--- Cata 40000-49999, MoP 50000-59999, Retail 100000+
-local buildVersion = select(4, GetBuildInfo())
 
 local validFormats = { text = true, csv = true, ["markdown-list"] = true, ["markdown-table"] = true }
 
@@ -85,8 +84,10 @@ local function captureRosterData()
 	if not guildName then return false end
 
 	local totalMembers = GetNumGuildMembers()
+	if totalMembers == 0 then return false end
 	local members = {}
 	for i = 1, totalMembers do
+		-- GetGuildRosterInfo returns: name, rankName, rankIndex, level, class, zone, note, officerNote, isOnline, ...
 		local name, rankName, _, level, classDisplayName, _, _, _, isOnline = GetGuildRosterInfo(i)
 		if name and name ~= "" then
 			table.insert(members, {
@@ -117,12 +118,11 @@ local function buildHeader(data, memberCount, format)
 	elseif format == "markdown-table" or format == "markdown-list" then
 		return "**Guild:** " .. data.guildName .. "  \n" ..
 		       "**Server:** " .. data.server .. "  \n" ..
-		       "**Members:** " .. memberCount .. "  \n" ..
-		       (format == "markdown-table" and "\n" or "")
+		       "**Members:** " .. memberCount .. "  \n\n"
 	else
-		return "Guild: " .. data.guildName .. "  \n" ..
-		       "Server: " .. data.server .. "  \n" ..
-		       "Members: " .. memberCount .. "  \n"
+		return "Guild: " .. data.guildName .. "\n" ..
+		       "Server: " .. data.server .. "\n" ..
+		       "Members: " .. memberCount .. "\n\n"
 	end
 end
 
@@ -137,15 +137,15 @@ end
 
 local columns = { "Name", "Level", "Class", "Rank", "Last Online" }
 
-local function formatMemberRow(format, rendererFormat, member)
+local function formatMemberRow(format, libRendererFormat, member)
 	if format == "markdown-list" then
 		local entry = member.name .. ", Level " .. member.level .. " " .. member.class
-		return SWE.RenderRow(rendererFormat, { entry })
+		return SWE.RenderRow(libRendererFormat, { entry })
 	elseif format == "text" then
 		local entry = member.name .. " | " .. member.level .. " " .. member.class .. " | " .. member.rank .. " | " .. member.lastOnline
-		return SWE.RenderRow(rendererFormat, { entry })
+		return SWE.RenderRow(libRendererFormat, { entry })
 	else
-		return SWE.RenderRow(rendererFormat, {
+		return SWE.RenderRow(libRendererFormat, {
 			member.name,
 			tostring(member.level),
 			member.class,
@@ -155,7 +155,8 @@ local function formatMemberRow(format, rendererFormat, member)
 	end
 end
 
-local function memberCount(lines, format)
+local function computeMemberCount(lines, format)
+	-- csv and markdown-table prepend a header row that must not be counted as a member
 	local hasHeaderRow = format == "csv" or format == "markdown-table"
 	return hasHeaderRow and (#lines - 1) or #lines
 end
@@ -166,21 +167,21 @@ local function buildExportText(format, includeOffline)
 	gre.lastFormat = format
 	if not gre.rosterData then return "", "" end
 	local data = gre.rosterData
-	local rendererFormat = libFormat(format)
+	local libRendererFormat = libFormat(format)
 
 	local lines = {}
 
 	if format == "csv" or format == "markdown-table" then
-		lines[#lines + 1] = SWE.RenderHeader(rendererFormat, columns)
+		lines[#lines + 1] = SWE.RenderHeader(libRendererFormat, columns)
 	end
 
 	for _, member in ipairs(data.members) do
 		if includeOffline or member.isOnline then
-			lines[#lines + 1] = formatMemberRow(format, rendererFormat, member)
+			lines[#lines + 1] = formatMemberRow(format, libRendererFormat, member)
 		end
 	end
 
-	local count  = memberCount(lines, format)
+	local count  = computeMemberCount(lines, format)
 	local header = buildHeader(data, count, format)
 	local title  = data.guildName .. " — " .. count .. " members"
 	return header .. table.concat(lines), title
@@ -221,11 +222,26 @@ local function runExport(exportType)
 	end
 end
 
-local function attachGuildButton()
-	if gre.guildButton then return end
+-- Forward declaration required because hookFrameOnShow references attachGuildButton
+-- before it is defined below.
+local attachGuildButton
 
-	local frame, applyButtonPosition
+-- Hooks attachGuildButton onto targetFrame's OnShow if not already hooked.
+-- flagKey is a gre table key used to track whether the hook has been applied.
+local function hookFrameOnShow(targetFrame, flagKey)
+	if targetFrame and not gre[flagKey] then
+		gre[flagKey] = true
+		targetFrame:HookScript("OnShow", attachGuildButton)
+	end
+end
+
+attachGuildButton = function()
+	if gre.guildButton then return end
+	-- GetBuildInfo() field 4 is the numeric interface version (e.g. 50400 for MoP 5.4, 120005 for Retail)
+	-- MoP Classic: 50000–59999. Retail: 100000+. All others are earlier classic flavors.
+	local buildVersion = select(4, GetBuildInfo())
 	local isMopOrRetail = (buildVersion >= 50000 and buildVersion < 60000) or buildVersion >= 100000
+	local frame, applyButtonPosition
 	if isMopOrRetail and CommunitiesFrame and CommunitiesFrame.GuildInfoTab then
 		-- MoP Classic (50xxx) and Retail (100xxx+): icon tab on right side below GRM's tab or Blizzard's GuildInfoTab
 		frame = CommunitiesFrame
@@ -248,14 +264,8 @@ local function attachGuildButton()
 		end
 	else
 		-- Frame not shown yet — hook for when it opens
-		local function hookOnShow(targetFrame, flagKey)
-			if targetFrame and not gre[flagKey] then
-				gre[flagKey] = true
-				targetFrame:HookScript("OnShow", attachGuildButton)
-			end
-		end
-		hookOnShow(CommunitiesFrame, "communityHooked")
-		hookOnShow(GuildFrame, "guildFrameHooked")
+		hookFrameOnShow(CommunitiesFrame, "communityHooked")
+		hookFrameOnShow(GuildFrame, "guildFrameHooked")
 		return
 	end
 
@@ -308,7 +318,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
 		self:UnregisterEvent("ADDON_LOADED")
 	elseif event == "GUILD_ROSTER_UPDATE" or event == "PLAYER_GUILD_UPDATE" then
 		attachGuildButton()
-		if pendingFormat then
+		if event == "GUILD_ROSTER_UPDATE" and pendingFormat then
 			local captured = captureRosterData()
 			if captured and exportWindow and gre.rosterData then
 				exportWindow:Open(pendingFormat, true)

@@ -26068,7 +26068,8 @@ read_globals = {
      },
      C_TradeSkillUI = {
          fields = {
-             'GetChildProfessionInfo',
+              'GetBaseProfessionInfo',
+              'GetChildProfessionInfo',
              'GetFilteredRecipeIDs',
              'GetProfessionInfoByRecipeID',
              'GetRecipeInfo',

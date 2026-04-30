@@ -43,6 +43,9 @@ ns.SWE = {}
 local SWE = ns.SWE
 
 -- Shared registry across all addon instances — uses a global so both lib copies can coordinate.
+-- addons: list of registered addon descriptors ({ name, version, helpCommand })
+-- slashRegistered: ensures /swexport is only registered once across both lib copies
+-- loadTimer: debounce handle so the load message prints after all addons have registered
 _G.SWERegistry = _G.SWERegistry or { addons = {}, slashRegistered = false, loadTimer = nil }
 
 -- SWE.RegisterAddon(name, version, helpCommand)
@@ -67,7 +70,8 @@ function SWE.RegisterAddon(name, version, helpCommand)
 	_G.SWERegistry.loadTimer = C_Timer.NewTimer(0.5, function()
 		local names = {}
 		for _, addon in ipairs(_G.SWERegistry.addons) do
-			local ver = addon.version and addon.version:match("v%d+%.%d+%.%d+")
+			-- Match only clean semver tags like "v1.2.3"; dev/alpha builds may not match and are omitted
+		local ver = addon.version and addon.version:match("v%d+%.%d+%.%d+")
 			table.insert(names, addon.name .. (ver and " \124cff00FF00" .. ver .. "\124r" or ""))
 		end
 		print("\124cff00FF00SimpleWowExporters\124r loaded: " .. table.concat(names, ", ") .. ". Type \124cff00FF00/swexport help\124r for commands.")
@@ -284,7 +288,7 @@ function SWE.CreateExportWindow(config)
 	closeBtn:SetScript("OnClick", function() frame:Hide() end)
 
 	-- Syncs button pushed state and text colour to selectedFormat.
-	-- Selected: white (1,1,1). Unselected: WoW gold (1,0.82,0).
+	-- Selected: white (1,1,1). Unselected: WoW UI gold RGB (1, 0.82, 0).
 	frame.updateControls = function()
 		for _, btn in ipairs(frame.formatButtons) do
 			local selected = btn.value == selectedFormat
@@ -307,9 +311,10 @@ function SWE.CreateExportWindow(config)
 	frame:SetScript("OnShow", function() frame.updateControls() end)
 
 	-- Public: set format + scope, then show.
-	function frame:Open(format, scope)
+	frame.Open = function(self, format, scope)
 		selectedFormat = format or selectedFormat
-		selectedScope  = scope  or false
+		-- Preserve current selectedScope if scope is not explicitly passed
+		selectedScope  = scope ~= nil and scope or selectedScope
 		frame.updateControls()
 		frame.refresh()
 		frame:Show()

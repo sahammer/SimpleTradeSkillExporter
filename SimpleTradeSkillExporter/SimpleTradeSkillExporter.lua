@@ -40,9 +40,9 @@ local expansionItemIdFloors = {
 tse.expansionItemIdFloor    = expansionItemIdFloors[WOW_PROJECT_ID]
 
 -- Translates TSE format values to the lib's internal format keys.
-local function libFormat(format)
-	if format == "markdown-table" then return "md-table" end
-	return format
+local function libFormat(formatKey)
+	if formatKey == "markdown-table" then return "md-table" end
+	return formatKey
 end
 
 local exportWindow
@@ -74,21 +74,22 @@ local function parseCommand(msg)
 	return format, exportAll
 end
 
-local function getCraftedOutputId(indexOrRecipeID)
+-- recipeRef: numeric index (classic GetTradeSkillItemLink) or recipeID (retail C_TradeSkillUI)
+local function getCraftedOutputId(recipeRef)
 	local itemLink
 	if isRetail then
-		itemLink = C_TradeSkillUI.GetRecipeItemLink(indexOrRecipeID)
+		itemLink = C_TradeSkillUI.GetRecipeItemLink(recipeRef)
 	else
-		itemLink = GetTradeSkillItemLink(indexOrRecipeID)
+		itemLink = GetTradeSkillItemLink(recipeRef)
 	end
 	if not itemLink then return nil end
 	local id = itemLink:match("item:(%d+)") or itemLink:match("enchant:(%d+)")
 	return id and tonumber(id) or nil
 end
 
-local function isCurrentExpansionRecipe(indexOrRecipeID)
+local function isCurrentExpansionRecipe(recipeRef)
 	if not tse.expansionItemIdFloor then return true end
-	local outputId = getCraftedOutputId(indexOrRecipeID)
+	local outputId = getCraftedOutputId(recipeRef)
 	if outputId == nil then return true end
 	return outputId >= tse.expansionItemIdFloor
 end
@@ -103,33 +104,33 @@ local function getPlayerInfo()
 	return { name = name, race = race, class = class, level = level, guild = guild, server = server }
 end
 
-local function buildHeader(player, skillName, rank, recipeCount, exportType)
-	if exportType == "markdown" or exportType == "markdown-table" then
-		local h =
-			"**Player:** " ..
-			player.name .. ", Level " .. player.level .. " " .. player.race .. " " .. player.class .. "  \n" ..
-			"**Guild:** " .. player.guild .. "  \n" ..
-			"**Server:** " .. player.server .. "  \n"
-		if rank > 0 then
-			h = h .. "**" .. skillName .. ":** Skill " .. rank .. ", " .. recipeCount .. " total recipes  \n"
+-- Renders the player info block. bold=true wraps field labels in ** for markdown.
+-- Markdown requires two trailing spaces before \n for a line break; plain text uses \n only.
+local function formatPlayerLine(player, bold)
+	local b = bold and "**" or ""
+	local nl = bold and "  \n" or "\n"
+	return
+		b .. "Player:" .. b .. " " ..
+		player.name .. ", Level " .. player.level .. " " .. player.race .. " " .. player.class .. nl ..
+		b .. "Guild:" .. b .. " " .. player.guild .. nl ..
+		b .. "Server:" .. b .. " " .. player.server .. nl
+end
+
+local function buildHeader(player, skillName, skillRank, recipeCount, exportType)
+	if exportType == "csv" then return "" end
+	local isMarkdown = exportType == "markdown" or exportType == "markdown-table"
+	local nl = isMarkdown and "  \n" or "\n"
+	local h = formatPlayerLine(player, isMarkdown)
+	if skillRank > 0 then
+		if isMarkdown then
+			h = h .. "**" .. skillName .. ":** Skill " .. skillRank .. ", " .. recipeCount .. " total recipes" .. nl
+		else
+			h = h .. skillName .. " skill " .. skillRank .. ", " .. recipeCount .. " total recipes" .. nl
 		end
-		if exportType == "markdown-table" then
-			return h .. "\n"
-		end
-		return h
-	elseif exportType == "csv" then
-		return ""
-	else
-		local h =
-			"Player: " ..
-			player.name .. ", Level " .. player.level .. " " .. player.race .. " " .. player.class .. "  \n" ..
-			"Guild: " .. player.guild .. "  \n" ..
-			"Server: " .. player.server .. "  \n"
-		if rank > 0 then
-			h = h .. skillName .. " skill " .. rank .. ", " .. recipeCount .. " total recipes  \n"
-		end
-		return h
 	end
+	-- Blank line between header block and recipe list for all formats
+	h = h .. "\n"
+	return h
 end
 
 local function printHelp()
@@ -145,17 +146,19 @@ local function printHelp()
 	print("\124cff00FF00TSE:\124r '/tsexport markdown table' or '/tsexport markdown table current' - Markdown table")
 end
 
-local function getItemLink(indexOrRecipeID)
+-- Returns a Wowhead URL path fragment ("item=12345" or "spell=12345") for the crafted output.
+-- recipeRef: numeric index (classic) or recipeID (retail), depending on client API.
+local function getWowheadPath(recipeRef)
 	local itemLink, itemId
 
 	if isRetail then
-		itemLink = C_TradeSkillUI.GetRecipeItemLink(indexOrRecipeID)
+		itemLink = C_TradeSkillUI.GetRecipeItemLink(recipeRef)
 		if itemLink then
 			itemId = itemLink:match("item:(%d+)") or itemLink:match("enchant:(%d+)")
 			if itemId then return "item=" .. tonumber(itemId) end
 		end
 		-- Fall back to the spell link for the recipe itself
-		itemLink = C_TradeSkillUI.GetRecipeLink(indexOrRecipeID)
+		itemLink = C_TradeSkillUI.GetRecipeLink(recipeRef)
 		if itemLink then
 			itemId = itemLink:match("spell:(%d+)")
 			if itemId then return "spell=" .. tonumber(itemId) end
@@ -163,19 +166,19 @@ local function getItemLink(indexOrRecipeID)
 		return nil
 	end
 
-	itemLink = GetTradeSkillItemLink(indexOrRecipeID)
+	itemLink = GetTradeSkillItemLink(recipeRef)
 	if itemLink then
 		itemId = itemLink:match("item:(%d+)") or itemLink:match("enchant:(%d+)")
 		if itemId then return "item=" .. tonumber(itemId) end
 	end
 
-	itemLink = GetTradeSkillRecipeLink(indexOrRecipeID)
+	itemLink = GetTradeSkillRecipeLink(recipeRef)
 	if itemLink then
 		itemId = itemLink:match("item:(%d+)") or itemLink:match("enchant:(%d+)")
 		if itemId then
 			return "spell=" .. tonumber(itemId)
 		else
-			print("|cffFF0000[TSE]: Unable to process entry " .. indexOrRecipeID)
+			print("|cffFF0000[TSE]: Unable to process entry " .. recipeRef)
 			if itemLink then print(itemLink:gsub('\124', '\124\124')) end
 			return nil
 		end
@@ -187,6 +190,9 @@ end
 local function captureRecipeData()
 	if isRetail then
 		local profInfo = C_TradeSkillUI.GetChildProfessionInfo()
+		if not profInfo or not profInfo.professionID then
+			profInfo = C_TradeSkillUI.GetBaseProfessionInfo()
+		end
 		if not profInfo or not profInfo.professionID then return false end
 
 		local skillName = profInfo.professionName or "Unknown"
@@ -207,7 +213,7 @@ local function captureRecipeData()
 				local expInfo = C_TradeSkillUI.GetProfessionInfoByRecipeID(recipeID)
 				table.insert(recipes, {
 					name               = info.name,
-					itemLink           = getItemLink(recipeID),
+					itemLink           = getWowheadPath(recipeID),
 					expansionName      = expInfo and expInfo.expansionName or nil,
 					isCurrentExpansion = C_TradeSkillUI.IsRecipeInSkillLine(recipeID, childProfessionID),
 				})
@@ -232,7 +238,7 @@ local function captureRecipeData()
 		if name and entryType ~= "header" then
 			table.insert(recipes, {
 				name               = name,
-				itemLink           = getItemLink(i),
+				itemLink           = getWowheadPath(i),
 				isCurrentExpansion = isCurrentExpansionRecipe(i),
 			})
 		end
@@ -268,9 +274,8 @@ local function buildExportText(format, scope)
 	local lines = {}
 	local count = #filtered
 
-	-- On retail, recipes carry expansionName — group by expansion with section headers.
-	-- On classic, recipes have no expansionName — emit a flat list as before.
-	local hasExpansionGroups = isRetail and filtered[1] and filtered[1].expansionName ~= nil
+	-- Retail recipes carry expansionName from GetProfessionInfoByRecipeID; classic recipes do not.
+	local hasExpansionGroups = isRetail and filtered[1] ~= nil and filtered[1].expansionName ~= nil
 
 	if hasExpansionGroups then
 		-- csv and md-table: emit column header with Expansion column
@@ -278,7 +283,7 @@ local function buildExportText(format, scope)
 			lines[#lines + 1] = SWE.RenderHeader(lib, { "Expansion", "Recipe" })
 		end
 
-		local currentExpansion = nil
+		local currentExpansion = nil -- nil sentinel: forces a section header on the first recipe
 		for _, recipe in ipairs(filtered) do
 			local expName = recipe.expansionName or "Unknown"
 			if expName ~= currentExpansion then
@@ -309,7 +314,8 @@ local function buildExportText(format, scope)
 	end
 
 	local header = buildHeader(data.player, data.skillName, data.skillRank, count, format)
-	local title  = data.skillName .. " skill " .. data.skillRank .. " - " .. count .. " recipes"
+	local skillRankSuffix = data.skillRank > 0 and (" skill " .. data.skillRank) or ""
+	local title = data.skillName .. skillRankSuffix .. " - " .. count .. " recipes"
 	return header .. table.concat(lines), title
 end
 
@@ -352,7 +358,12 @@ local function attachTradeSkillButton()
 		button:SetSize(72, 18)
 		button:SetText("TSExport")
 		button:SetFrameLevel(ProfessionsFrame.CloseButton:GetFrameLevel())
-		button:SetPoint("LEFT", ProfessionsFrame.CraftingPage.TutorialButton, "RIGHT", 4, 0)
+		local tutorialBtn = ProfessionsFrame.CraftingPage and ProfessionsFrame.CraftingPage.TutorialButton
+		if tutorialBtn then
+			button:SetPoint("LEFT", tutorialBtn, "RIGHT", 4, 0)
+		else
+			button:SetPoint("TOPRIGHT", ProfessionsFrame, "TOPRIGHT", -54, -28)
+		end
 		button:SetScript("OnClick", function()
 			runExport(tse.lastFormat or "text", tse.lastScope ~= false)
 		end)
@@ -383,8 +394,8 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
 			self:UnregisterEvent("TRADE_SKILL_SHOW")
 			return
 		end
-		local getMetadata = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-		local version = getMetadata and getMetadata(addonName, "Version")
+		local getAddonMetadata = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+		local version = getAddonMetadata and getAddonMetadata(addonName, "Version")
 		SWE.RegisterAddon("SimpleTradeSkillExporter", version, "/tsexport help")
 		self:UnregisterEvent("ADDON_LOADED")
 	elseif event == "TRADE_SKILL_SHOW" then
