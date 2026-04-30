@@ -117,12 +117,12 @@ local function buildHeader(data, memberCount, format)
 	elseif format == "markdown-table" or format == "markdown-list" then
 		return "**Guild:** " .. data.guildName .. "  \n" ..
 		       "**Server:** " .. data.server .. "  \n" ..
-		       "**Members:** " .. memberCount .. "  \n\n"
+		       "**Members:** " .. memberCount .. "  \n" ..
+		       (format == "markdown-table" and "\n" or "")
 	else
 		return "Guild: " .. data.guildName .. "  \n" ..
 		       "Server: " .. data.server .. "  \n" ..
-		       "Members: " .. memberCount .. "  \n" ..
-		       "---------------------\n"
+		       "Members: " .. memberCount .. "  \n"
 	end
 end
 

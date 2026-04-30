@@ -4,22 +4,22 @@
 --              Supports all classic WoW flavors (Vanilla, TBC, Wrath, Cata, MoP).
 --              Use /tsexport or the Export button on the tradeskill window.
 
-local addonName, tse = ...
-local SWE = tse.SWE -- loaded by SimpleWowExportersLib.lua via TOC
+local addonName, tse        = ...
+local SWE                   = tse.SWE -- loaded by SimpleWowExportersLib.lua via TOC
 
 -- WOW_PROJECT_* constants are only defined on their respective clients.
 -- Use numeric literals as table keys to avoid nil key errors on other clients.
 -- Values sourced from https://warcraft.wiki.gg/wiki/WOW_PROJECT_ID
-local PROJECT_MAINLINE   = 1
-local PROJECT_CLASSIC    = 2
-local PROJECT_TBC        = 5
-local PROJECT_WRATH      = 11
-local PROJECT_CATA       = 14
-local PROJECT_MISTS      = 19
+local PROJECT_MAINLINE      = 1
+local PROJECT_CLASSIC       = 2
+local PROJECT_TBC           = 5
+local PROJECT_WRATH         = 11
+local PROJECT_CATA          = 14
+local PROJECT_MISTS         = 19
 
-local isRetail = WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
+local isRetail              = WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
 
-local wowheadUrls = {
+local wowheadUrls           = {
 	[PROJECT_MAINLINE] = "https://www.wowhead.com/",
 	[PROJECT_MISTS]    = "https://wowhead.com/mop-classic/",
 	[PROJECT_CATA]     = "https://wowhead.com/cata/",
@@ -27,7 +27,7 @@ local wowheadUrls = {
 	[PROJECT_TBC]      = "https://wowhead.com/tbc/",
 	[PROJECT_CLASSIC]  = "https://wowhead.com/classic/",
 }
-tse.wowheadBase = wowheadUrls[WOW_PROJECT_ID]
+tse.wowheadBase             = wowheadUrls[WOW_PROJECT_ID]
 
 local expansionItemIdFloors = {
 	[PROJECT_MAINLINE] = 210000, -- The War Within
@@ -37,13 +37,20 @@ local expansionItemIdFloors = {
 	[PROJECT_TBC]      = 24000,
 	[PROJECT_CLASSIC]  = nil,
 }
-tse.expansionItemIdFloor = expansionItemIdFloors[WOW_PROJECT_ID]
+tse.expansionItemIdFloor    = expansionItemIdFloors[WOW_PROJECT_ID]
+
+-- Translates TSE format values to the lib's internal format keys.
+local function libFormat(format)
+	if format == "markdown-table" then return "md-table" end
+	return format
+end
 
 local exportWindow
 
-local validFormats = { text = true, csv = true, markdown = true }
+local validFormats = { text = true, csv = true, markdown = true, ["markdown-table"] = true }
 
 -- Examples: "csv" -> ("csv", true), "csv current" -> ("csv", false), "" -> ("text", true)
+-- "markdown table" -> ("markdown-table", true), "markdown table current" -> ("markdown-table", false)
 -- All expansions is the default. Append "current" to limit to current expansion only.
 -- Unknown format values are normalised to "text" with a warning printed to chat.
 local function parseCommand(msg)
@@ -54,6 +61,11 @@ local function parseCommand(msg)
 	if not exportAll then table.remove(parts, #parts) end
 
 	local format = parts[1] or "text"
+	-- "markdown table" is a two-word alias for "markdown-table"
+	if format == "markdown" and parts[2] == "table" then
+		format = "markdown-table"
+	end
+
 	if not validFormats[format] then
 		print("|cffFF0000[TSE]:|r Unknown format '" .. format .. "', defaulting to text.")
 		format = "text"
@@ -92,7 +104,7 @@ local function getPlayerInfo()
 end
 
 local function buildHeader(player, skillName, rank, recipeCount, exportType)
-	if exportType == "markdown" then
+	if exportType == "markdown" or exportType == "markdown-table" then
 		local h =
 			"**Player:** " ..
 			player.name .. ", Level " .. player.level .. " " .. player.race .. " " .. player.class .. "  \n" ..
@@ -101,7 +113,10 @@ local function buildHeader(player, skillName, rank, recipeCount, exportType)
 		if rank > 0 then
 			h = h .. "**" .. skillName .. ":** Skill " .. rank .. ", " .. recipeCount .. " total recipes  \n"
 		end
-		return h .. "\n"
+		if exportType == "markdown-table" then
+			return h .. "\n"
+		end
+		return h
 	elseif exportType == "csv" then
 		return ""
 	else
@@ -113,13 +128,13 @@ local function buildHeader(player, skillName, rank, recipeCount, exportType)
 		if rank > 0 then
 			h = h .. skillName .. " skill " .. rank .. ", " .. recipeCount .. " total recipes  \n"
 		end
-		return h .. "---------------------\n"
+		return h
 	end
 end
 
 local function printHelp()
 	print(
-	"\124cff00FF00TSE:\124r \124cff00FF00S\124rimple \124cff00FF00T\124rradeskill \124cff00FF00E\124rxporter - Help")
+		"\124cff00FF00TSE:\124r \124cff00FF00S\124rimple \124cff00FF00T\124rradeskill \124cff00FF00E\124rxporter - Help")
 	print("\124cff00FF00TSE:\124r Type '/tsexport help' to show this message")
 	print("\124cff00FF00TSE:\124r Open a tradeskill window, then type one of the following commands")
 	print("\124cff00FF00TSE:\124r By default, all expansions are exported")
@@ -127,6 +142,7 @@ local function printHelp()
 	print("\124cff00FF00TSE:\124r '/tsexport' or '/tsexport current' - plain text list")
 	print("\124cff00FF00TSE:\124r '/tsexport csv' or '/tsexport csv current' - Comma Separated Value list")
 	print("\124cff00FF00TSE:\124r '/tsexport markdown' or '/tsexport markdown current' - Markdown list")
+	print("\124cff00FF00TSE:\124r '/tsexport markdown table' or '/tsexport markdown table current' - Markdown table")
 end
 
 local function getItemLink(indexOrRecipeID)
@@ -239,6 +255,7 @@ local function buildExportText(format, scope)
 	tse.lastScope  = scope
 	if not tse.recipeData then return "", "" end
 	local data = tse.recipeData
+	local lib = libFormat(format)
 
 	-- Collect recipes that pass the scope filter
 	local filtered = {}
@@ -256,9 +273,9 @@ local function buildExportText(format, scope)
 	local hasExpansionGroups = isRetail and filtered[1] and filtered[1].expansionName ~= nil
 
 	if hasExpansionGroups then
-		-- CSV: emit column header with Expansion column first
-		if format == "csv" then
-			lines[#lines + 1] = SWE.RenderHeader(format, { "Expansion", "Recipe" })
+		-- csv and md-table: emit column header with Expansion column
+		if lib == "csv" or lib == "md-table" then
+			lines[#lines + 1] = SWE.RenderHeader(lib, { "Expansion", "Recipe" })
 		end
 
 		local currentExpansion = nil
@@ -266,24 +283,28 @@ local function buildExportText(format, scope)
 			local expName = recipe.expansionName or "Unknown"
 			if expName ~= currentExpansion then
 				currentExpansion = expName
-				if format == "markdown" then
+				if lib == "markdown" then
 					lines[#lines + 1] = "\n## " .. expName .. "\n\n"
-				elseif format == "text" then
+				elseif lib == "text" then
 					lines[#lines + 1] = "\n--- " .. expName .. " ---\n"
 				end
-				-- csv: no section header — expansion is a column value instead
+				-- csv / md-table: expansion is a column value, no section header needed
 			end
 			local url = tse.wowheadBase and (tse.wowheadBase .. recipe.itemLink) or nil
-			if format == "csv" then
-				lines[#lines + 1] = SWE.RenderRow(format, { expName, { label = recipe.name, url = url } })
+			if lib == "csv" or lib == "md-table" then
+				lines[#lines + 1] = SWE.RenderRow(lib, { expName, { label = recipe.name, url = url } })
 			else
-				lines[#lines + 1] = SWE.RenderRow(format, { { label = recipe.name, url = url } })
+				lines[#lines + 1] = SWE.RenderRow(lib, { { label = recipe.name, url = url } })
 			end
 		end
 	else
+		-- Classic flat list — emit column header for tabular formats
+		if lib == "csv" or lib == "md-table" then
+			lines[#lines + 1] = SWE.RenderHeader(lib, { "Recipe" })
+		end
 		for _, recipe in ipairs(filtered) do
 			local url = tse.wowheadBase and (tse.wowheadBase .. recipe.itemLink) or nil
-			lines[#lines + 1] = SWE.RenderRow(format, { { label = recipe.name, url = url } })
+			lines[#lines + 1] = SWE.RenderRow(lib, { { label = recipe.name, url = url } })
 		end
 	end
 
@@ -293,7 +314,7 @@ local function buildExportText(format, scope)
 end
 
 local function runExport(exportType, exportAll)
-	if (exportType == "csv" or exportType == "markdown") and not tse.wowheadBase then
+	if (exportType == "csv" or exportType == "markdown" or exportType == "markdown-table") and not tse.wowheadBase then
 		print("\124cffFF0000Error:\124r CSV and Markdown exports are not supported on this version of WoW.")
 		return
 	end
@@ -307,8 +328,9 @@ local function runExport(exportType, exportAll)
 		exportWindow = SWE.CreateExportWindow({
 			buttons       = {
 				{ label = "Text",     value = "text" },
-				{ label = "CSV",      value = "csv",      disabled = not tse.wowheadBase },
-				{ label = "Markdown", value = "markdown", disabled = not tse.wowheadBase },
+				{ label = "CSV",      value = "csv",            disabled = not tse.wowheadBase },
+				{ label = "MD List",  value = "markdown",       disabled = not tse.wowheadBase },
+				{ label = "MD Table", value = "markdown-table", disabled = not tse.wowheadBase },
 			},
 			defaultFormat = "text",
 			hasScope      = tse.expansionItemIdFloor ~= nil or isRetail,
@@ -329,7 +351,8 @@ local function attachTradeSkillButton()
 		local button = CreateFrame("Button", nil, ProfessionsFrame, "UIPanelButtonTemplate")
 		button:SetSize(72, 18)
 		button:SetText("TSExport")
-		button:SetPoint("RIGHT", ProfessionsFrame.MaximizeMinimize, "LEFT", -2, 0)
+		button:SetFrameLevel(ProfessionsFrame.CloseButton:GetFrameLevel())
+		button:SetPoint("LEFT", ProfessionsFrame.CraftingPage.TutorialButton, "RIGHT", 4, 0)
 		button:SetScript("OnClick", function()
 			runExport(tse.lastFormat or "text", tse.lastScope ~= false)
 		end)
@@ -355,7 +378,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
 	if event == "ADDON_LOADED" and arg1 == addonName then
 		if not tse.SWE then
 			print(
-			"\124cffFF0000[TSE] Error:\124r SimpleWowExportersLib failed to load. Ensure SimpleWowExportersLib.lua is in the addon folder.")
+				"\124cffFF0000[TSE] Error:\124r SimpleWowExportersLib failed to load. Ensure SimpleWowExportersLib.lua is in the addon folder.")
 			self:UnregisterEvent("ADDON_LOADED")
 			self:UnregisterEvent("TRADE_SKILL_SHOW")
 			return
