@@ -1,4 +1,5 @@
 ## Interface: 50503
+## Interface-Retail: 120005
 ## Interface-Mists: 50503
 ## Interface-TBC: 20505
 ## Interface-Vanilla: 11508

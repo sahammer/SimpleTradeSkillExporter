@@ -17091,8 +17091,9 @@ read_globals = {
     'ProductChoiceItem_OnClick',
     'PromoteToAssistant',
     'PromoteToLeader',
-    'PropagateForbiddenToReferencedFrames',
-    'PropertyBindingMixin',
+     'PropagateForbiddenToReferencedFrames',
+     'ProfessionsFrame',
+     'PropertyBindingMixin',
     'PropertyButtonMixin',
     'PropertyFontStringMixin',
     'PropertySliderMixin',
@@ -24477,8 +24478,9 @@ read_globals = {
     'WOW_PROJECT_BURNING_CRUSADE_CLASSIC',
     'WOW_PROJECT_CATACLYSM_CLASSIC',
     'WOW_PROJECT_CLASSIC',
-    'WOW_PROJECT_ID',
-    'WOW_PROJECT_MISTS_CLASSIC',
+     'WOW_PROJECT_ID',
+     'WOW_PROJECT_MAINLINE',
+     'WOW_PROJECT_MISTS_CLASSIC',
     'WOW_PROJECT_WRATH_CLASSIC',
     'WRISTSLOT',
     'WRONG_SLOT_FOR_ITEM',
@@ -26058,12 +26060,24 @@ read_globals = {
             'NewTimer'
         }
     },
-    C_ToyBoxInfo = {
-        fields = {
-            'ClearFanfare',
-            'NeedsFanfare'
-        }
-    },
+     C_ToyBoxInfo = {
+         fields = {
+             'ClearFanfare',
+             'NeedsFanfare'
+         }
+     },
+     C_TradeSkillUI = {
+         fields = {
+              'GetBaseProfessionInfo',
+              'GetChildProfessionInfo',
+             'GetFilteredRecipeIDs',
+             'GetProfessionInfoByRecipeID',
+             'GetRecipeInfo',
+             'GetRecipeItemLink',
+             'GetRecipeLink',
+             'IsRecipeInSkillLine',
+         }
+     },
     C_Traits = {
         fields = {
             'CanPurchaseRank',
