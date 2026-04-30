@@ -289,9 +289,14 @@ local function buildExportText(format, scope)
 			if expName ~= currentExpansion then
 				currentExpansion = expName
 				if lib == "markdown" then
-					lines[#lines + 1] = "\n## " .. expName .. "\n\n"
+					-- No leading \n — header block already ends with a blank line.
+					-- Trailing \n\n gives a blank line between the heading and its recipe list.
+					lines[#lines + 1] = "## " .. expName .. "\n\n"
 				elseif lib == "text" then
-					lines[#lines + 1] = "\n--- " .. expName .. " ---\n"
+					-- No leading \n — the blank line at the end of the header block already
+					-- provides separation before the first section; subsequent sections get
+					-- a blank line from the trailing \n of the previous recipe row.
+					lines[#lines + 1] = "--- " .. expName .. " ---\n"
 				end
 				-- csv / md-table: expansion is a column value, no section header needed
 			end

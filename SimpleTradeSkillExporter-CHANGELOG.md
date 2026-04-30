@@ -1,3 +1,12 @@
+# 1.4.0
+Adds Retail (The War Within) support and a new Markdown Table export format.
+
+- Added full support for Retail WoW (The War Within) — export recipes from all professions
+- Retail exports group recipes by expansion with section headers (text/markdown) or an Expansion column (CSV/MD Table)
+- Added Markdown Table export format — available via the **MD Table** button or `/tsexport markdown table`
+- Export window format buttons now labelled **Text**, **CSV**, **MD List**, **MD Table**
+- **All expansions** scope toggle now available on Retail
+
 # 1.3.2
 Adds combined suite load message and /swexport help command shared across all Simple WoW Exporters addons.
 

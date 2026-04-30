@@ -1,3 +1,10 @@
+# 1.0.1
+Fixes plain text header formatting and export window scope preservation.
+
+- Fixed plain text export header using markdown-style line breaks — now uses standard line endings
+- Fixed export window losing the selected scope when switching formats
+- Fixed export not triggering when guild roster data was unavailable at the time of the request on some clients
+
 # 1.0.0
 Initial release of SimpleGuildRosterExporter.
 
