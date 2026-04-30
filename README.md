@@ -4,11 +4,11 @@ Simple World of Warcraft exporters is a suite of focused addons that make it eas
 
 ## SimpleTradeSkillExporter
 
-Simple Trade Skill Exporter is an addon which allows you to export your learned trade skill recipes. It supports all professions and is triggered via the tradeskill window or slash commands. You can export your recipes as plain text, Markdown list, Markdown table, or CSV — with Wowhead links on supported clients. Supports Retail (The War Within) and all classic WoW flavors. Originally inspired by TradeSkillExporter, created with permission from GrumpyOldLisian. Part of the *SimpleWowExporters* collection of addons.
+Simple Trade Skill Exporter is an addon which allows you to export your learned trade skill recipes. It supports all professions and is triggered via the tradeskill window or slash commands. You can export your recipes as plain text, Markdown list, Markdown table, or CSV — with Wowhead links on supported clients. Supports Retail (Midnight) and all classic WoW flavors. Originally inspired by TradeSkillExporter, created with permission from GrumpyOldLisian. Part of the *SimpleWowExporters* collection of addons.
 
 ### Supported Versions
 
-- Retail (The War Within)
+- Retail (Midnight)
 - Mists of Pandaria Classic
 - Cataclysm Classic
 - Wrath of the Lich King Classic
@@ -45,7 +45,7 @@ Simple Guild Roster Exporter allows you to export your guild roster to plain tex
 
 ### Supported Versions
 
-- Retail (The War Within)
+- Retail (Midnight)
 - Mists of Pandaria Classic
 - Cataclysm Classic
 - Wrath of the Lich King Classic

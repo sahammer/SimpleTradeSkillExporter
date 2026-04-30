@@ -1,7 +1,7 @@
 # 1.4.0
-Adds Retail (The War Within) support and a new Markdown Table export format.
+Adds Retail (Midnight) support and a new Markdown Table export format.
 
-- Added full support for Retail WoW (The War Within) — export recipes from all professions
+- Added full support for Retail WoW (Midnight) — export recipes from all professions
 - Retail exports group recipes by expansion with section headers (text/markdown) or an Expansion column (CSV/MD Table)
 - Added Markdown Table export format — available via the **MD Table** button or `/tsexport markdown table`
 - Export window format buttons now labelled **Text**, **CSV**, **MD List**, **MD Table**

@@ -1,7 +1,7 @@
 -- SimpleTradeSkillExporter
 -- Author: Hamma
 -- Description: Exports trade skill recipes to plain text, CSV, Markdown list, or Markdown table.
---              Supports Retail (The War Within) and all classic WoW flavors (Vanilla, TBC, Wrath, Cata, MoP).
+--              Supports Retail (Midnight) and all classic WoW flavors (Vanilla, TBC, Wrath, Cata, MoP).
 --              Use /tsexport or the Export button on the tradeskill window.
 
 local addonName, tse        = ...
@@ -30,7 +30,7 @@ local wowheadUrls           = {
 tse.wowheadBase             = wowheadUrls[WOW_PROJECT_ID]
 
 local expansionItemIdFloors = {
-	[PROJECT_MAINLINE] = 210000, -- The War Within
+	[PROJECT_MAINLINE] = 210000, -- Midnight
 	[PROJECT_MISTS]    = 71000,
 	[PROJECT_CATA]     = 52000,
 	[PROJECT_WRATH]    = 35000,
